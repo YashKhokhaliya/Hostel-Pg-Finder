@@ -1,0 +1,574 @@
+HOSTEL / PG FINDER - MAANG STYLE PROJECT ROADMAP
+
+PROJECT GOAL
+-------------
+Build a scalable Hostel/PG Finder platform where students can search,
+filter, compare, and review hostels/PGs, while owners can create and
+manage listings.
+
+TECH STACK
+----------
+Frontend:
+- React.js
+- Tailwind CSS
+
+Backend:
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+
+Additional:
+- Redis
+- Cloudinary
+- JWT Authentication
+- Google Maps / Geolocation
+- Docker
+- GitHub Actions / CI-CD
+
+
+==================================================
+1. AUTHENTICATION & AUTHORIZATION
+==================================================
+
+User Roles:
+- Student
+- Owner
+- Admin
+
+Features:
+- Register
+- Login
+- Logout
+- JWT Access Token
+- Refresh Token
+- Password hashing with bcrypt
+- Forgot password
+- Reset password
+- OTP verification
+
+Authorization:
+- Role-based access control
+- Students can search and review
+- Owners can create and manage their own listings
+- Admins can verify and manage listings
+
+
+==================================================
+2. HOSTEL / PG MANAGEMENT
+==================================================
+
+Hostel Model:
+
+- owner
+- hostelName
+- description
+- location
+    - address
+    - latitude
+    - longitude
+    - googleMapLink
+- rent
+- securityDeposit
+- type
+    - Hostel
+    - PG
+- allowedGenders
+    - Male
+    - Female
+    - Other
+- facilities
+    - wifi
+    - ac
+    - laundry
+    - parking
+    - food
+    - hotWater
+    - security
+- photos
+    - url
+    - publicId
+- roomTypes
+- availableRooms
+- totalRooms
+- isVerified
+- isActive
+- createdAt
+- updatedAt
+
+
+==================================================
+3. SEARCH & FILTERING
+==================================================
+
+Students should be able to search by:
+
+- Location
+- Hostel/PG name
+- Rent range
+- Hostel or PG
+- Allowed gender
+- Facilities
+- Room type
+- Availability
+- Rating
+
+Example:
+
+"Find female PGs under $300 within 5 km of LD College."
+
+
+==================================================
+4. GEOLOCATION & GEO-SPATIAL SEARCH
+==================================================
+
+Implement MongoDB 2dsphere index.
+
+Features:
+
+- Store latitude and longitude
+- Search hostels near a location
+- Find hostels within a specific radius
+- Sort hostels by distance
+
+Example:
+
+"Find all PGs within 5 km of my current location."
+
+Important concepts:
+
+- GeoJSON
+- 2dsphere index
+- $near
+- $geoWithin
+
+
+==================================================
+5. IMAGE MANAGEMENT
+==================================================
+
+Use Cloudinary.
+
+Features:
+
+- Upload multiple hostel images
+- Store Cloudinary URL
+- Store publicId
+- Delete individual images
+- Delete images when hostel is deleted
+- Replace hostel images
+
+Database:
+
+photos[]
+    - url
+    - publicId
+
+
+==================================================
+6. REVIEWS & RATINGS
+==================================================
+
+Create a separate Review collection.
+
+Review:
+
+- user
+- hostel
+- rating
+- comment
+- createdAt
+
+Features:
+
+- Add review
+- Update review
+- Delete own review
+- One review per user per hostel
+- Calculate average rating
+- Calculate total review count
+
+Database index:
+
+Unique compound index:
+
+(user, hostel)
+
+
+==================================================
+7. ADMIN VERIFICATION
+==================================================
+
+Owner creates a hostel.
+
+Initial state:
+
+isVerified = false
+
+Admin can:
+
+- View pending listings
+- Approve listing
+- Reject listing
+- Remove listing
+- Block owner
+
+Only verified hostels should appear in public search.
+
+
+==================================================
+8. PAGINATION
+==================================================
+
+Implement pagination for hostel listings.
+
+Basic:
+
+- page
+- limit
+
+For large-scale systems:
+
+- Cursor-based pagination
+
+Example:
+
+GET /api/v1/hostels?cursor=xxx&limit=20
+
+
+==================================================
+9. REDIS
+==================================================
+
+Use Redis for:
+
+- OTP storage
+- Caching popular searches
+- Caching hostel details
+- Rate limiting
+- Temporary data
+
+Example:
+
+Student searches:
+
+"PGs near LD College"
+
+Cache the result temporarily.
+
+If another user makes the same search:
+
+Redis returns cached data instead of querying MongoDB.
+
+
+==================================================
+10. DATABASE OPTIMIZATION
+==================================================
+
+Learn and implement indexes.
+
+Possible indexes:
+
+- location: 2dsphere
+- owner
+- rent
+- type
+- allowedGenders
+- isVerified
+
+Compound indexes based on real query patterns.
+
+Understand:
+
+- Query optimization
+- Index selectivity
+- Compound indexes
+- Explain plans
+- Avoiding unnecessary queries
+
+
+==================================================
+11. API DESIGN
+==================================================
+
+Authentication:
+
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+POST /api/v1/auth/logout
+POST /api/v1/auth/refresh-token
+
+Hostels:
+
+POST   /api/v1/hostels
+GET    /api/v1/hostels
+GET    /api/v1/hostels/:id
+PATCH  /api/v1/hostels/:id
+DELETE /api/v1/hostels/:id
+
+Reviews:
+
+POST   /api/v1/hostels/:id/reviews
+GET    /api/v1/hostels/:id/reviews
+PATCH  /api/v1/reviews/:id
+DELETE /api/v1/reviews/:id
+
+Admin:
+
+GET   /api/v1/admin/hostels/pending
+PATCH /api/v1/admin/hostels/:id/verify
+PATCH /api/v1/admin/hostels/:id/reject
+
+
+==================================================
+12. SECURITY
+==================================================
+
+Implement:
+
+- Password hashing
+- JWT authentication
+- Refresh token rotation
+- Input validation
+- MongoDB query sanitization
+- Rate limiting
+- CORS
+- Helmet
+- Secure HTTP headers
+- Environment variables
+- File upload validation
+- File size limits
+
+Never store:
+
+- Plain-text passwords
+- Secrets in GitHub
+- API keys in source code
+
+
+==================================================
+13. ERROR HANDLING
+==================================================
+
+Implement:
+
+- Centralized error handler
+- Custom API error class
+- Async handler
+- Consistent API response format
+- Proper HTTP status codes
+
+Example:
+
+400 - Bad Request
+401 - Unauthorized
+403 - Forbidden
+404 - Not Found
+409 - Conflict
+500 - Internal Server Error
+
+
+==================================================
+14. LOGGING & MONITORING
+==================================================
+
+Implement:
+
+- Request logging
+- Error logging
+- Authentication logs
+- Important database errors
+
+Possible tools:
+
+- Winston
+- Morgan
+
+Production monitoring can include:
+
+- Application errors
+- API response time
+- Database performance
+
+
+==================================================
+15. SYSTEM DESIGN
+==================================================
+
+Be able to explain:
+
+Client
+   |
+   v
+Load Balancer
+   |
+   v
+Node.js / Express Servers
+   |
+   +------> Redis
+   |
+   +------> MongoDB
+   |
+   +------> Cloudinary
+
+Understand:
+
+- Horizontal scaling
+- Stateless backend
+- Caching
+- Database indexing
+- Load balancing
+- Rate limiting
+- CDN
+- Database replication
+
+
+==================================================
+16. DEPLOYMENT
+==================================================
+
+Deploy:
+
+- Frontend
+- Backend
+- MongoDB
+- Redis
+
+Use:
+
+- Docker
+- GitHub Actions
+- CI/CD
+
+Environment variables:
+
+- MONGODB_URI
+- JWT_SECRET
+- JWT_REFRESH_SECRET
+- CLOUDINARY credentials
+- REDIS_URL
+
+
+==================================================
+17. MAANG INTERVIEW QUESTIONS TO PREPARE
+==================================================
+
+Be ready to answer:
+
+1. Why did you choose MongoDB?
+
+2. Why did you use Redis?
+
+3. Why do you store Cloudinary publicId?
+
+4. How do you search hostels within 5 km?
+
+5. How does MongoDB 2dsphere indexing work?
+
+6. How would you handle 10 million hostel listings?
+
+7. How would you scale your backend?
+
+8. How would you prevent duplicate reviews?
+
+9. How do you secure your APIs?
+
+10. How do you handle concurrent updates?
+
+11. How would you implement rate limiting?
+
+12. How would you reduce database queries?
+
+13. What indexes did you create and why?
+
+14. Why did you embed facilities instead of creating another collection?
+
+15. How would you handle 100,000 concurrent users?
+
+16. How would you design the system if traffic increases 100x?
+
+17. How would you prevent an owner from modifying another owner's hostel?
+
+18. How does JWT authentication work?
+
+19. What happens if Redis goes down?
+
+20. What happens if MongoDB goes down?
+
+
+==================================================
+18. PRIORITY ORDER
+==================================================
+
+PHASE 1 - CORE
+--------------
+1. Authentication
+2. User roles
+3. Hostel CRUD
+4. Cloudinary uploads
+5. Search
+6. Filtering
+7. Pagination
+
+
+PHASE 2 - ADVANCED
+------------------
+8. Geospatial search
+9. MongoDB indexes
+10. Reviews and ratings
+11. Admin verification
+12. Redis caching
+
+
+PHASE 3 - PRODUCTION
+--------------------
+13. Security
+14. Rate limiting
+15. Centralized error handling
+16. Logging
+17. Docker
+18. CI/CD
+19. Deployment
+
+
+PHASE 4 - INTERVIEW PREPARATION
+-------------------------------
+20. System design
+21. Database design
+22. Scalability
+23. Caching
+24. Indexing
+25. Trade-offs
+
+
+==================================================
+FINAL TARGET
+==================================================
+
+The goal is NOT to build the biggest project.
+
+The goal is to build ONE project that you deeply understand.
+
+You should be able to explain:
+
+- Why you chose each technology
+- Why you designed your database this way
+- How your APIs work
+- How authentication works
+- How your search works
+- How you optimized database queries
+- How your system scales
+- What happens when a service fails
+- What trade-offs you made
+
+This project combined with:
+
+- Strong DSA
+- Data Structures & Algorithms
+- DBMS
+- Operating Systems
+- Computer Networks
+- OOP
+- System Design
+
+can form a strong MAANG interview preparation profile.

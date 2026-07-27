@@ -1,0 +1,2 @@
+Owner must upload the hostel photos max to max 8 not more than that so , be aware of it and at the Multer configuration add the validation (limit) of 8 photos
+only user with role as owner should allowed to create the hostel account so , make sure to handle while the writing the controller of the creation of the hostel
