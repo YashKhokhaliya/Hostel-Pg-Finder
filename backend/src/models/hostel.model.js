@@ -14,11 +14,13 @@ const hostelSchema = new Schema ({
         location:{
             address:{
                 type:String,
-                required:true
+                required:true,
+                trim: true
             },
             googleMapLink:{
                 type:String,
-                required:true
+                required:true,
+                trim: true
             }
         },
         rent: {

@@ -36,7 +36,7 @@ const userSchema = new Schema(
             trim: true
         },
 
-        profilePhoto: {
+        profilePhoto: { 
             type: String,
             required: true
         },
