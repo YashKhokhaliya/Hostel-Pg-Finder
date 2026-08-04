@@ -3,7 +3,7 @@ import fs from "fs"
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY, 
+    api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 })
 
@@ -30,4 +30,27 @@ const uploadOnCloudinary = async (localFilePath) => {
   }
 };
 
-export {uploadOnCloudinary};
+const DeleteOnCloudinary = async function (PublicId){
+    try{
+        if(!PublicId) return null
+        const response = await cloudinary.uploader.destroy(PublicId);
+        
+        if(response.result==='ok') {
+            console.log("Image is removed from cloudinary");
+            return true;
+        }
+        
+        console.log("Image is not removed from cloudinary")
+        return false;
+
+    }
+    catch(error){
+        console.log("Image is not found in cloudinary !!!")
+        return null
+    }
+}
+
+export {
+    uploadOnCloudinary,
+    DeleteOnCloudinary
+};
