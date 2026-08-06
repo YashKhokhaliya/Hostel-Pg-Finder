@@ -1,13 +1,76 @@
+const sendWelcomeEmail = async (email, username) => {
+    await transporter.sendMail({
+        from: `"Hostel-PG-Find" <${process.env.MAIL_USER}>`,
+        to: email,
+        subject: "Welcome to Hostel-PG-Find 🎉",
+        text: `Welcome to Hostel-PG-Find, ${username}!
 
-const sendWelcomeMail = async(email)=>{
+Your account has been successfully created.
 
-}
+You can now explore hostels and PGs, connect with owners, and find the perfect place for your stay.
+
+Thank you for joining us.
+
+Regards,
+Hostel-PG-Find Team
+
+This is an automated email. Please do not reply to this message.`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
+                
+                <h2 style="text-align: center;">
+                    Welcome to Hostel-PG-Find 🎉
+                </h2>
+
+                <p>Hello <strong>${username}</strong>,</p>
+
+                <p>
+                    We are excited to have you with us!
+                    Your account has been successfully created.
+                </p>
+
+                <p>
+                    With <strong>Hostel-PG-Find</strong>, you can:
+                </p>
+
+                <ul>
+                    <li>Find suitable hostels and PG accommodations</li>
+                    <li>Connect with hostel and PG owners</li>
+                    <li>Explore available stays easily</li>
+                </ul>
+
+                <p>
+                    We hope you find the perfect place for your stay.
+                </p>
+
+                <p>
+                    Thank you for joining our platform.
+                </p>
+
+                <p>
+                    Regards,<br>
+                    <strong>Hostel-PG-Find Team</strong>
+                </p>
+
+                <hr>
+
+                <p style="font-size: 12px; color: #777;">
+                    This is an automated email. Please do not reply to this message.
+                </p>
+
+            </div>
+        `
+    });
+};
+
 const sendOTPEmail = async (email, otp) => {
     await transporter.sendMail({
         from: `"Hostel-PG-Find" <${process.env.MAIL_USER}>`,
         to: email,
         subject: "Your OTP Verification Code",
-        text: `Your OTP is ${otp}. This OTP will expire in 2 minutes. Do not share this OTP with anyone.`,
+        text: `Your OTP is ${otp}. This OTP will expire in 2 minutes. Do not share this OTP with anyone.
+
+Please do not reply to this email.`,
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
                 <h2>Email Verification</h2>
@@ -37,18 +100,25 @@ const sendOTPEmail = async (email, otp) => {
 
                 <p>
                     Regards,<br>
-                    <strong>Your App Name</strong>
+                    <strong>Hostel-PG-Find</strong>
+                </p>
+
+                <hr>
+
+                <p style="font-size: 12px; color: #777;">
+                    This is an automated email. Please do not reply to this message.
                 </p>
             </div>
         `
     });
 };
 
-const sendPasswordResetMail = async(email)=>{
+// const sendPasswordResetMail = async(email)=>{
 
-}
+// }
 
 
 export {
-    sendOTPEmail
+    sendOTPEmail,
+    sendWelcomeEmail
 };

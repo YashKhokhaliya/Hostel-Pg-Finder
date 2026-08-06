@@ -134,5 +134,4 @@ const verifyOTP = async(email, otp) => {
 export {
     storeOTP,
     verifyOTP,
-    checkOTPGenerationLimit
 }
