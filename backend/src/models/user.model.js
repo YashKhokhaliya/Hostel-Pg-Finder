@@ -38,12 +38,10 @@ const userSchema = new Schema(
 
         profilePhoto: { 
             type: String,
-            required: true
         },
 
         profilePhotoPublicId: {
             type: String,
-            required: true
         },
 
         gender:{

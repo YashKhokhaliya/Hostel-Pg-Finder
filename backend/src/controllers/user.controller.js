@@ -6,8 +6,9 @@ import { User } from "../models/user.model.js";
 import generateOTP from "../utils/otpGenerate.js";
 
 
-const userRegistration = await AsyncHandler(async(req, res)=>{
+const userRegistration = AsyncHandler(async(req, res)=>{
     const {username, fullname, email, password, gender, number, role} = req.body;
+    const path = req.file?.path;
 
     // validate all the field
     // validate gender
@@ -61,20 +62,58 @@ const userRegistration = await AsyncHandler(async(req, res)=>{
     // check whether the user already exists or not
     const existedUser=await User.findOne(
         {
-            $or:[{number, email}]
+            $or:[
+                {username},
+                {email},
+                {mobileNumber:number}
+            ]
         }
     )
 
     if(existedUser){
-        throw new ApiError(409,'Username with email or mobile number already exists')
+        throw new ApiError(409,'username, email or mobile number already exists')
     }
-
-    // verify the user mail
-    const otp=generateOTP()
+    let result;
+    try {
     
-
-
+        if(path){
+            result = await uploadOnCloudinary(path);
+        }
     
+        const user = await User.create({
+            username:username,
+            email:email,
+            mobileNumber:number,
+            fullname:fullname,
+            profilePhoto:result?.url,
+            profilePhotoPublicId:result?.public_id,
+            gender:gender,
+            role:role,
+            password:password,
+        })
+    
+        const response = await User.findById(user._id).select("-password")
+    
+        if(!response){
+            throw new ApiError(500, 'Failed to fetch the newly registered user')
+        }
+    
+        return res
+        .status(201)
+        .json(
+            new ApiResponse(
+                201,
+                response,
+                'Successfully registered the user'
+            )
+        )
+    
+    } catch (error) {
+        if(result?.public_id){
+            await DeleteOnCloudinary(result?.public_id)
+        }
+        throw error
+    }
 })
 
 export{
