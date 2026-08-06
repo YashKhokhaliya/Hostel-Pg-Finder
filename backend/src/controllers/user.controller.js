@@ -5,7 +5,6 @@ import { uploadOnCloudinary, DeleteOnCloudinary } from "../utils/Cloudinary.js";
 import { User } from "../models/user.model.js";
 import generateOTP from "../utils/otpGenerate.js";
 
-
 const userRegistration = AsyncHandler(async(req, res)=>{
     const {username, fullname, email, password, gender, number, role} = req.body;
     const path = req.file?.path;
