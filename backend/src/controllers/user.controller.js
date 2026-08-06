@@ -4,7 +4,8 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 import { uploadOnCloudinary, DeleteOnCloudinary } from "../utils/Cloudinary.js";
 import { User } from "../models/user.model.js";
 import generateOTP from "../utils/otpGenerate.js";
-
+import { storeOTP, verifyOTP} from "../services/otp.service.js";
+import { sendOTPEmail,sendWelcomeMail } from "../services/mail.service.js";
 
 const userRegistration = AsyncHandler(async(req, res)=>{
     const {username, fullname, email, password, gender, number, role} = req.body;
@@ -14,7 +15,7 @@ const userRegistration = AsyncHandler(async(req, res)=>{
     // validate gender
     // validate role
     // validate password
-    // validate contact number
+    // validate contact numberS
     // validate email
 
     if(
@@ -120,6 +121,128 @@ const userRegistration = AsyncHandler(async(req, res)=>{
 })
 
 
+const requestLoginOtp = AsyncHandler(async(req,res)=>{
+    const {email, password} = req.body
+
+    if(!email || !password){
+        throw new ApiError(400, "Email and Password are required")
+    }
+
+    const user = await User.findOne({
+        email: email.trim().toLowerCase()
+    })
+
+    if(!user){
+        throw new ApiError(401, "Invalid email or password")
+    }
+
+    const isPasswordValid = await user.isPasswordCorrect(password)
+
+    if(!isPasswordValid){
+        throw new ApiError(401, "Invalid email or password")
+    }
+
+    //otp Generation
+
+    const otp = generateOTP();
+
+    
+    //store into radis
+    await storeOTP(user.email, otp);
+
+    //send to user email
+    try {
+        await sendOTPEmail(user.email, otp);
+    } catch (error) {
+        await redisClient.del(`otp:${user.email}`);
+
+        throw new ApiError(
+            500,
+            "Failed to send OTP. Please try again."
+        );
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                email: user.email
+            },
+            "Otp sent successfully"
+        )
+    )
+})
+
+const userLogin = AsyncHandler(async (req,res) => {
+    const {email, otp} = req.body
+
+    if(!email?.trim() || !otp){
+        throw new ApiError(400, "email and otp required")
+    }
+
+    const user = await User.findOne({
+        email: email.trim().toLowerCase()
+    })
+
+    if(!user){
+        throw new ApiError(401, "Invalid user request")
+    }
+
+    const userAlreadyVerified = user.isVerified
+    //verify otp
+    await verifyOTP(user.email, String(otp))
+
+    const accessToken = user.generateAccessToken()
+    const refreshToken = user.generateRefreshToken()
+
+    user.refreshToken = refreshToken
+    user.isVerified = true
+    await user.save({
+        validateBeforeSave: false
+    })
+
+    if(!userAlreadyVerified){
+        try{
+            await sendWelcomeMail(user.email)
+        } catch(error){
+            console.error(`Welcome email failed for ${user.email}:`,error.message)
+        }
+    }
+    
+
+    const loggedInUser = await User.findById(user._id)
+    .select("-refreshToken -password")
+
+    const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite:
+        process.env.NODE_ENV === "production"
+        ? "none"
+        : "lax",
+    };
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, cookieOptions)
+    .cookie("refreshToken", refreshToken, cookieOptions)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                user: loggedInUser,
+                accessToken,
+                refreshToken
+            },
+            "User Logged In Successfully"
+        )
+    )
+})
+
 export{
     userRegistration,
+    requestLoginOtp,
+    userLogin
 }
