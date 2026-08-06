@@ -112,7 +112,10 @@ const userRegistration = AsyncHandler(async(req, res)=>{
         if(result?.public_id){
             await DeleteOnCloudinary(result?.public_id)
         }
-        throw error
+        throw new ApiError(
+            error.statusCode || 500,
+            error.message || "Failed to register the user"
+        );
     }
 })
 
