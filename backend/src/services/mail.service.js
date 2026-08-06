@@ -1,3 +1,5 @@
+import { transporter } from "../config/mail.config.js";
+
 const sendWelcomeEmail = async (email, username) => {
     await transporter.sendMail({
         from: `"Hostel-PG-Find" <${process.env.MAIL_USER}>`,
@@ -111,6 +113,7 @@ Please do not reply to this email.`,
             </div>
         `
     });
+
 };
 
 // const sendPasswordResetMail = async(email)=>{

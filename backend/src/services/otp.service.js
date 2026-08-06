@@ -1,5 +1,5 @@
 import { redisClient } from "../config/redis.config.js";
-import { ApiError } from "./ApiError.js";
+import { ApiError } from "../utils/ApiError.js";
 
 const checkOTPCooldown = async(email) => {
 

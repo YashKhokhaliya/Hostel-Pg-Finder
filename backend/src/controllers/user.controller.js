@@ -5,7 +5,8 @@ import { uploadOnCloudinary, DeleteOnCloudinary } from "../utils/Cloudinary.js";
 import { User } from "../models/user.model.js";
 import generateOTP from "../utils/otpGenerate.js";
 import { storeOTP, verifyOTP} from "../services/otp.service.js";
-import { sendOTPEmail,sendWelcomeMail } from "../services/mail.service.js";
+import { sendOTPEmail,sendWelcomeEmail } from "../services/mail.service.js";
+import { redisClient } from "../config/redis.config.js";
 
 const userRegistration = AsyncHandler(async(req, res)=>{
     const {username, fullname, email, password, gender, number, role} = req.body;
@@ -154,6 +155,7 @@ const requestLoginOtp = AsyncHandler(async(req,res)=>{
     try {
         await sendOTPEmail(user.email, otp);
     } catch (error) {
+        console.error("Failed to send login OTP:", error);
         await redisClient.del(`otp:${user.email}`);
 
         throw new ApiError(
@@ -205,15 +207,15 @@ const userLogin = AsyncHandler(async (req,res) => {
 
     if(!userAlreadyVerified){
         try{
-            await sendWelcomeMail(user.email)
+            await sendWelcomeEmail(user.email, user.username)
         } catch(error){
             console.error(`Welcome email failed for ${user.email}:`,error.message)
         }
-    }
     
+    }
 
     const loggedInUser = await User.findById(user._id)
-    .select("-refreshToken -password")
+    .select("-refreshToken -password -__v")
 
     const cookieOptions = {
         httpOnly: true,
