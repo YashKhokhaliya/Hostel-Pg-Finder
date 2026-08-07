@@ -242,6 +242,56 @@ const userLogin = AsyncHandler(async (req,res) => {
     )
 })
 
+const updatePassword = AsyncHandler(async (req,res)=> {
+    const {oldPassword, newPassword, confirmPassword} = req.body
+
+    if(!oldPassword || !newPassword || !confirmPassword){
+        throw new ApiError(400, "Old password, new password, and confirm password are required")
+    }
+
+    if(newPassword !== confirmPassword){
+        throw new ApiError(400, "newPassword and confirmPassword must match")
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
+    if (!passwordRegex.test(newPassword)) {
+        throw new ApiError(
+            400,
+            "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one digit, and one special character"
+        );
+    }
+
+    const user = await User.findById(req.user._id)
+    if(!user){
+        throw new ApiError(404, "User not found")
+    }
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+    if(!isPasswordCorrect){
+        throw new ApiError(400, "Invalid old password")
+    }
+
+    const isSamePassword = await user.isPasswordCorrect(newPassword);
+
+    if (isSamePassword) {
+        throw new ApiError(
+            400,
+            "New password must be different from the current password"
+        );
+    }
+
+    user.password = newPassword
+    await user.save()
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, {}, "Password updated successfully")
+    )
+})
+
 const userLogout = AsyncHandler(async (req, res)=> {
     const user = await User.findByIdAndUpdate(
         req.user._id,
@@ -332,9 +382,62 @@ const userProfilePhotoDelete = AsyncHandler(async(req, res)=>{
     .status(200)
     .json(
         new ApiResponse(
-            200,
-            "Profile photo removed successfully"
+                    200,
+                    "Profile photo removed successfully"
         )
+    )
+})
+
+const updateProfilePhoto = AsyncHandler(async (req,res)=> {
+    const profileLocalPath = req.file?.path
+
+    if(!profileLocalPath){
+        throw new ApiError(400, "profilePhoto file is missing")
+    }
+
+    const user = await User.findById(req.user._id)
+    if(!user){
+        throw new ApiError(404, "User not found")
+    }
+
+    const profilePhoto = await uploadOnCloudinary(profileLocalPath)
+
+    if(!profilePhoto?.url || !profilePhoto?.public_id){
+        throw new ApiError(500, "Error while uploading photo")
+    }
+
+    const currentPublicId = user.profilePhotoPublicId
+
+   try{
+        user.profilePhoto= profilePhoto.url
+        user.profilePhotoPublicId= profilePhoto.public_id
+
+        await user.save({validateBeforeSave: false})
+    } catch(error){
+        try {
+            await DeleteOnCloudinary(profilePhoto.public_id);
+        } catch (cleanupError) {
+            console.log(
+                "Failed to cleanup newly uploaded profile photo:",
+                cleanupError
+            );
+        }
+
+        throw error;
+    }
+
+    if (currentPublicId) {
+        try {
+            await DeleteOnCloudinary(currentPublicId);
+        } catch (error) {
+            console.log("Failed to delete old profile photo:", error);
+        }
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, {profilePhoto: user.profilePhoto}, "Profile photo updated successfully")
     )
 })
 
@@ -343,5 +446,7 @@ export{
     requestLoginOtp,
     userLogin,
     userLogout,
-    userProfilePhotoDelete
+    userProfilePhotoDelete,
+    updatePassword,
+    updateProfilePhoto
 }
