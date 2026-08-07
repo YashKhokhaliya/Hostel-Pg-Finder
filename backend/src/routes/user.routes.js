@@ -5,7 +5,8 @@ import {
     requestLoginOtp,
     userLogin,
     userRegistration,
-    userLogout
+    userLogout,
+    userProfilePhotoDelete
 } from "../controllers/user.controller.js";
 
 const router = Router()
@@ -19,5 +20,6 @@ router.route("/request-otp").post(requestLoginOtp);
 //After otp submission user can login
 router.route("/login").post(userLogin);
 router.route("/logout").post(verifyJWT, userLogout);
+router.route('/remove-profile-photo').delete(verifyJWT, userProfilePhotoDelete)
 
 export default router

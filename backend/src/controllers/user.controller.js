@@ -271,9 +271,77 @@ const userLogout = AsyncHandler(async (req, res)=> {
     )
 })
 
+const userProfilePhotoDelete = AsyncHandler(async(req, res)=>{
+    const user = await User.findById(req.user._id)
+
+    if(!user) throw new ApiError(404,"User not found")
+
+    const userProfilePhoto = user?.profilePhoto
+    
+    if(!userProfilePhoto){
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                "Profile photo removed successfully"
+            )
+        )
+    }
+
+    const userProfilePhotoPublicID = user?.profilePhotoPublicId
+
+    const result = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $unset:{
+                profilePhoto:1,
+                profilePhotoPublicId:1
+            }
+        },
+        {
+            new:true
+        }
+    )
+
+    if(!result)  {
+        throw new ApiError(500,"Failed to remove the profile photo")
+    }
+
+    try {
+        await DeleteOnCloudinary(userProfilePhotoPublicID)
+    } catch (error) {
+
+        await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $set:{
+                    profilePhoto:userProfilePhoto,
+                    profilePhotoPublicId:userProfilePhotoPublicID
+                }
+            },
+            {
+                new:true
+            }
+        )
+
+        throw new ApiError(500, "Failed to remove the profile photo")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            "Profile photo removed successfully"
+        )
+    )
+})
+
 export{
     userRegistration,
     requestLoginOtp,
     userLogin,
-    userLogout
+    userLogout,
+    userProfilePhotoDelete
 }
