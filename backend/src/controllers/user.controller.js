@@ -4,7 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 import { uploadOnCloudinary, DeleteOnCloudinary } from "../utils/Cloudinary.js";
 import { User } from "../models/user.model.js";
 import generateOTP from "../utils/otpGenerate.js";
-import { storeOTP, verifyOTP} from "../services/otp.service.js";
+import { storeOTP, verifyOTP } from "../services/otp.service.js";
 import { sendOTPEmail,sendWelcomeEmail } from "../services/mail.service.js";
 import { redisClient } from "../config/redis.config.js";
 
@@ -121,7 +121,6 @@ const userRegistration = AsyncHandler(async(req, res)=>{
     }
 })
 
-
 const requestLoginOtp = AsyncHandler(async(req,res)=>{
     const {email, password} = req.body
 
@@ -201,6 +200,7 @@ const userLogin = AsyncHandler(async (req,res) => {
 
     user.refreshToken = refreshToken
     user.isVerified = true
+
     await user.save({
         validateBeforeSave: false
     })
@@ -211,7 +211,6 @@ const userLogin = AsyncHandler(async (req,res) => {
         } catch(error){
             console.error(`Welcome email failed for ${user.email}:`,error.message)
         }
-    
     }
 
     const loggedInUser = await User.findById(user._id)
@@ -243,8 +242,38 @@ const userLogin = AsyncHandler(async (req,res) => {
     )
 })
 
+const userLogout = AsyncHandler(async (req, res)=> {
+    const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $unset:{
+                refreshToken:1
+            }
+        },
+        {
+            new:true
+        }
+    );
+        
+    if(!user){
+        throw new ApiError(404, 'User not found')
+    }
+
+    return res
+    .clearCookie("accessToken")
+    .clearCookie("refreshToken")
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            "user logged out successfully"
+        )
+    )
+})
+
 export{
     userRegistration,
     requestLoginOtp,
-    userLogin
+    userLogin,
+    userLogout
 }

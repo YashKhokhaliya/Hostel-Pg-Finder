@@ -120,8 +120,12 @@ const verifyOTP = async(email, otp) => {
             );
         }
 
+        // once the user otp is correct delete all the otp related limits
+        
         await redisClient.del(`otp:${email}`);
         await redisClient.del(`otp_attempt:${email}`);
+        await redisClient.del(`otp_request:${email}`);
+        await redisClient.del(`otp_cooldown:${email}`);
 
         return true;
 
