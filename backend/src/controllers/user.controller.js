@@ -243,8 +243,60 @@ const userLogin = AsyncHandler(async (req,res) => {
     )
 })
 
+const updatePassword = AsyncHandler(async (req,res)=> {
+    const {oldPassword, newPassword, confirmPassword} = req.body
+
+    if(!oldPassword || !newPassword || !confirmPassword){
+        throw new ApiError(400, "Old password, new password, and confirm password are required")
+    }
+
+    if(newPassword !== confirmPassword){
+        throw new ApiError(400, "newPassword and confirmPassword must match")
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
+    if (!passwordRegex.test(newPassword)) {
+        throw new ApiError(
+            400,
+            "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one digit, and one special character"
+        );
+    }
+
+    const user = await User.findById(req.user._id)
+    if(!user){
+        throw new ApiError(404, "User not found")
+    }
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+    if(!isPasswordCorrect){
+        throw new ApiError(400, "Invalid old password")
+    }
+
+    const isSamePassword = await user.isPasswordCorrect(newPassword);
+
+    if (isSamePassword) {
+        throw new ApiError(
+            400,
+            "New password must be different from the current password"
+        );
+    }
+
+    user.password = newPassword
+    await user.save()
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, {}, "Password updated successfully")
+    )
+
+})
+
 export{
     userRegistration,
     requestLoginOtp,
-    userLogin
+    userLogin,
+    updatePassword
 }
