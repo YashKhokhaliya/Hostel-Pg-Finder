@@ -1,9 +1,13 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js"
 import { upload } from "../middlewares/multer.middleware.js"
-import { requestLoginOtp, userLogin } from "../controllers/user.controller.js";
-import { userRegistration } from "../controllers/user.controller.js"
-import { updatePassword } from "../controllers/user.controller.js";
+import { 
+    requestLoginOtp,
+    userLogin,
+    userRegistration,
+    userLogout,
+    updatePassword
+} from "../controllers/user.controller.js";
 
 const router = Router()
 
@@ -12,9 +16,10 @@ router.route("/register").post(
     userRegistration
 )
 
-router.post("/request-otp", requestLoginOtp);
+router.route("/request-otp").post(requestLoginOtp);
 //After otp submission user can login
-router.post("/login", userLogin);
+router.route("/login").post(userLogin);
+router.route("/logout").post(verifyJWT, userLogout);
 
 //update Password
 router.route("/update-password").patch(verifyJWT, updatePassword)
