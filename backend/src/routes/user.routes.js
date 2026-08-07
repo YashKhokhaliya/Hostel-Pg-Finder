@@ -6,7 +6,8 @@ import {
     userLogin,
     userRegistration,
     userLogout,
-    updatePassword
+    updatePassword,
+    updateProfilePhoto
 } from "../controllers/user.controller.js";
 
 const router = Router()
@@ -23,5 +24,8 @@ router.route("/logout").post(verifyJWT, userLogout);
 
 //update Password
 router.route("/update-password").patch(verifyJWT, updatePassword)
+
+//update profile-photo
+router.route("/profile-photo").patch(verifyJWT, upload.single('profilePhoto'), updateProfilePhoto)
 
 export default router

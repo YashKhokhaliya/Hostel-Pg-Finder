@@ -321,10 +321,64 @@ const userLogout = AsyncHandler(async (req, res)=> {
     )
 })
 
+const updateProfilePhoto = AsyncHandler(async (req,res)=> {
+    const profileLocalPath = req.file?.path
+
+    if(!profileLocalPath){
+        throw new ApiError(400, "profilePhoto file is missing")
+    }
+
+    const user = await User.findById(req.user._id)
+    if(!user){
+        throw new ApiError(404, "User not found")
+    }
+
+    const profilePhoto = await uploadOnCloudinary(profileLocalPath)
+
+    if(!profilePhoto?.url || !profilePhoto?.public_id){
+        throw new ApiError(500, "Error while uploading photo")
+    }
+
+    const currentPublicId = user.profilePhotoPublicId
+
+   try{
+        user.profilePhoto= profilePhoto.url
+        user.profilePhotoPublicId= profilePhoto.public_id
+
+        await user.save({validateBeforeSave: false})
+    } catch(error){
+        try {
+            await DeleteOnCloudinary(profilePhoto.public_id);
+        } catch (cleanupError) {
+            console.log(
+                "Failed to cleanup newly uploaded profile photo:",
+                cleanupError
+            );
+        }
+
+        throw error;
+    }
+
+    if (currentPublicId) {
+        try {
+            await DeleteOnCloudinary(currentPublicId);
+        } catch (error) {
+            console.log("Failed to delete old profile photo:", error);
+        }
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, {profilePhoto: user.profilePhoto}, "Profile photo updated successfully")
+    )
+})
+
 export{
     userRegistration,
     requestLoginOtp,
     userLogin,
     updatePassword,
-    userLogout
+    userLogout,
+    updateProfilePhoto
 }
