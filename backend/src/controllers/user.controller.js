@@ -469,7 +469,7 @@ const getCurrentUser = AsyncHandler(async(req, res)=>{
         throw new ApiError(401, 'Unauthorized request');
     }
 
-    const user = await User.findById(req.user?._id).select('-password -refreshToken -__v');
+    const user = await User.findById(req.user?._id).select('-password -refreshToken -__v -profilePhotoPublicId');
 
     if(!user) {
         throw new ApiError(404, 'User not found')

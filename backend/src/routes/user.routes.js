@@ -12,7 +12,8 @@ import {
     refreshAccessToken,
     forgetPasswordOtp,
     verifyOtpPasswordReset,
-    resetPassword
+    resetPassword,
+    getCurrentUser
 } from "../controllers/user.controller.js";
 
 const router = Router()
@@ -41,5 +42,6 @@ router.route("/refresh-tokens").post(refreshAccessToken)
 router.route("/forget-password").post(forgetPasswordOtp)
 router.route("/verify-otp").post(verifyOtpPasswordReset)
 router.route("/reset-password").patch(resetPassword)
+router.route("/current-user").get(verifyJWT,getCurrentUser)
 
 export default router
