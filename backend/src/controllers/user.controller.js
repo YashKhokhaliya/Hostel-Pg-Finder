@@ -13,7 +13,23 @@ import {
     sendPasswordResetOTPEmail
 } from "../services/mail.service.js";
 
-import { redisClient } from "../config/redis.config.js";
+import jwt from "jsonwebtoken"
+import { generatePasswordResetToken } from "../services/passwordReset.service.js";
+
+const generateAccessAndRefreshToken = async(userId)=>{
+    try{
+        const user = await User.findById(userId)
+        const refreshToken = user.generateRefreshToken()
+        const accessToken = user.generateAccessToken()
+
+        user.refreshToken = refreshToken
+        await user.save({validateBeforeSave: false})
+
+        return {accessToken, refreshToken}
+    } catch(error){
+        throw new ApiError(500, "Something went wrong while generating refresh and access token")
+    }
+}
 
 const userRegistration = AsyncHandler(async(req, res)=>{
     const {username, fullname, email, password, gender, number, role} = req.body;
@@ -471,6 +487,64 @@ const getCurrentUser = AsyncHandler(async(req, res)=>{
     
 })
 
+const refreshAccessToken = AsyncHandler(async (req,res)=> {
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken
+
+    if(!incomingRefreshToken){
+        throw new ApiError(401, "unauthorized request")
+    }
+
+    try{
+        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+
+        const user = await User.findById(decodedToken?._id)
+
+        if(!user){
+            throw new ApiError(401, "Invalid refresh Token")
+        }
+
+        if(incomingRefreshToken !== user?.refreshToken){
+            throw new ApiError(401, "Refresh token is expired or used")
+        }
+
+        const options = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite:
+            process.env.NODE_ENV === "production"
+            ? "none"
+            : "lax",
+        }
+
+        const {accessToken, refreshToken: newRefreshToken} = await generateAccessAndRefreshToken(user._id)
+
+        return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", newRefreshToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                {accessToken, refreshToken: newRefreshToken},
+                "Access token refreshed"
+            )
+        )
+    } catch (error) {
+        if (error instanceof ApiError) {
+            throw error;
+        }
+
+        if (
+            error.name === "JsonWebTokenError" ||
+            error.name === "TokenExpiredError"
+        ) {
+            throw new ApiError(401, "Invalid or expired refresh token");
+        }
+
+        throw new ApiError(500, "Internal server error");
+    }
+})
+
 const forgetPasswordOtp = AsyncHandler(async(req, res)=>{
     const { email } = req.body;
 
@@ -483,6 +557,8 @@ const forgetPasswordOtp = AsyncHandler(async(req, res)=>{
     }
 
     const otp = generateOTP();
+
+    await storeOTP(email, otp);
 
     await sendPasswordResetOTPEmail(email, otp);
 
@@ -507,10 +583,14 @@ const verifyOtpPasswordReset = AsyncHandler(async(req, res)=>{
         {email}
     )
 
-    await verifyOTP(email, otp);
+    if(!user) {
+        throw new ApiError(404, 'User not found')
+    }
 
+    await verifyOTP(email, String(otp));
+
+    const passwordResetToken = await generatePasswordResetToken(user._id)
     // generate the reset token
-    
 
     const options = {
         httpOnly: true,
@@ -521,7 +601,7 @@ const verifyOtpPasswordReset = AsyncHandler(async(req, res)=>{
 
     return res
     .status(200)
-    .cookie('reset-token', /* reset token*/ options)
+    .cookie('ResetToken',passwordResetToken, options)
     .json(
         new ApiResponse(
             200,
@@ -530,7 +610,75 @@ const verifyOtpPasswordReset = AsyncHandler(async(req, res)=>{
     )
 })
 
+const resetPassword = AsyncHandler(async (req,res)=>{
+    const {newPassword, confirmPassword} = req.body
 
+    const resetToken = req.cookies?.ResetToken
+
+    if (!resetToken) {
+        throw new ApiError(
+            401,
+            "Unauthorized to reset password"
+        );
+    }
+
+    if(!newPassword || !confirmPassword){
+        throw new ApiError(400, "new password and confirm password are required")
+    }
+
+    if(newPassword !== confirmPassword){
+        throw new ApiError(400, "new password and confirm password must match")
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
+    if (!passwordRegex.test(newPassword)) {
+        throw new ApiError(
+            400,
+            "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one digit, and one special character"
+        );
+    }
+
+    const userId = await redisClient.get(
+        `password_reset:${resetToken}`
+    )
+
+    if(!userId){
+        throw new ApiError(401, "Reset token is invalid or expired")
+    }
+
+    const user = await User.findById(userId)
+
+    if(!user) {
+        throw new ApiError(404, 'User is not found')
+    }
+
+    user.password = newPassword
+    await user.save()
+
+    await redisClient.del(
+        `password_reset:${resetToken}`
+    )
+
+    const options = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite:
+        process.env.NODE_ENV === "production"
+        ? "none"
+        : "lax",
+    }
+
+    return res
+    .status(200)
+    .clearCookie('ResetToken', options)
+    .json(
+        new ApiResponse(
+            200,
+            'reset password successfully'
+        )
+    )
+})
 
 export{
     userRegistration,
@@ -541,6 +689,8 @@ export{
     updatePassword,
     updateProfilePhoto,
     getCurrentUser,
+    refreshAccessToken,
     forgetPasswordOtp,
-    verifyOtpPasswordReset
+    verifyOtpPasswordReset,
+    resetPassword
 }

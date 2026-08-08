@@ -72,8 +72,6 @@ const storeOTP = async(email, otp) => {
             }
         );
 
-        
-
     } catch (error) {
         throw error;
     }
