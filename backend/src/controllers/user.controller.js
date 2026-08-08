@@ -5,7 +5,14 @@ import { uploadOnCloudinary, DeleteOnCloudinary } from "../utils/Cloudinary.js";
 import { User } from "../models/user.model.js";
 import generateOTP from "../utils/otpGenerate.js";
 import { storeOTP, verifyOTP } from "../services/otp.service.js";
-import { sendOTPEmail,sendWelcomeEmail } from "../services/mail.service.js";
+import { redisClient } from "../config/redis.config.js";
+
+import {
+    sendOTPEmail,
+    sendWelcomeEmail,
+    sendPasswordResetOTPEmail
+} from "../services/mail.service.js";
+
 import { redisClient } from "../config/redis.config.js";
 
 const userRegistration = AsyncHandler(async(req, res)=>{
@@ -441,6 +448,90 @@ const updateProfilePhoto = AsyncHandler(async (req,res)=> {
     )
 })
 
+const getCurrentUser = AsyncHandler(async(req, res)=>{
+    if (!req.user?._id) {
+        throw new ApiError(401, 'Unauthorized request');
+    }
+
+    const user = await User.findById(req.user?._id).select('-password -refreshToken -__v');
+
+    if(!user) {
+        throw new ApiError(404, 'User not found')
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user,
+            'User fetched successfully'
+        )
+    )
+    
+})
+
+const forgetPasswordOtp = AsyncHandler(async(req, res)=>{
+    const { email } = req.body;
+
+    const existedEmail = await User.findOne( // it expects the object
+        {email}
+    );
+
+    if(!existedEmail) {
+        throw new ApiError(404, 'User not found')
+    }
+
+    const otp = generateOTP();
+
+    await sendPasswordResetOTPEmail(email, otp);
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            'Reset password OTP sent successfully'
+        )
+    )
+})
+
+const verifyOtpPasswordReset = AsyncHandler(async(req, res)=>{
+    const {email, otp} = req.body;
+    
+    if(!email.toLowerCase().trim() || !otp) {
+        throw new ApiError(400, "Otp or email is required")
+    }
+
+    const user = await User.findOne(
+        {email}
+    )
+
+    await verifyOTP(email, otp);
+
+    // generate the reset token
+    
+
+    const options = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge:10*60*1000 // 10 minutes * 60 second * 1000 millisecond, after this cookie will remove this 
+    }
+
+    return res
+    .status(200)
+    .cookie('reset-token', /* reset token*/ options)
+    .json(
+        new ApiResponse(
+            200,
+            'OTP verified successfully to reset password'
+        )
+    )
+})
+
+
+
 export{
     userRegistration,
     requestLoginOtp,
@@ -448,5 +539,8 @@ export{
     userLogout,
     userProfilePhotoDelete,
     updatePassword,
-    updateProfilePhoto
+    updateProfilePhoto,
+    getCurrentUser,
+    forgetPasswordOtp,
+    verifyOtpPasswordReset
 }
