@@ -7,6 +7,8 @@ import generateOTP from "../utils/otpGenerate.js";
 import { storeOTP, verifyOTP } from "../services/otp.service.js";
 import { sendOTPEmail,sendWelcomeEmail } from "../services/mail.service.js";
 import { redisClient } from "../config/redis.config.js";
+import jwt from "jsonwebtoken"
+import { generatePasswordResetToken } from "../services/passwordReset.service.js";
 
 const userRegistration = AsyncHandler(async(req, res)=>{
     const {username, fullname, email, password, gender, number, role} = req.body;
@@ -441,6 +443,142 @@ const updateProfilePhoto = AsyncHandler(async (req,res)=> {
     )
 })
 
+const generateAccessAndRefreshToken = async(userId)=>{
+    try{
+        const user = await User.findById(userId)
+        const refreshToken = user.generateRefreshToken()
+        const accessToken = user.generateAccessToken()
+
+        user.refreshToken = refreshToken
+        await user.save({validateBeforeSave: false})
+
+        return {accessToken, refreshToken}
+    } catch(error){
+        throw new ApiError(500, "Something went wrong while generating refresh and access token")
+    }
+}
+
+const refreshAccessToken = AsyncHandler(async (req,res)=> {
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken
+
+    if(!incomingRefreshToken){
+        throw new ApiError(401, "unauthorized request")
+    }
+
+    try{
+        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+
+        const user = await User.findById(decodedToken?._id)
+
+        if(!user){
+            throw new ApiError(401, "Invalid refresh Token")
+        }
+
+        if(incomingRefreshToken !== user?.refreshToken){
+            throw new ApiError(401, "Refresh token is expired or used")
+        }
+
+        const options = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite:
+            process.env.NODE_ENV === "production"
+            ? "none"
+            : "lax",
+        }
+
+        const {accessToken, refreshToken: newRefreshToken} = await generateAccessAndRefreshToken(user._id)
+
+        return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", newRefreshToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                {accessToken, refreshToken: newRefreshToken},
+                "Access token refreshed"
+            )
+        )
+    } catch (error) {
+        if (error instanceof ApiError) {
+            throw error;
+        }
+
+        if (
+            error.name === "JsonWebTokenError" ||
+            error.name === "TokenExpiredError"
+        ) {
+            throw new ApiError(401, "Invalid or expired refresh token");
+        }
+
+        throw new ApiError(500, "Internal server error");
+    }
+})
+
+const resetPassword = AsyncHandler(async (req,res)=>{
+    const {newPassword, confirmPassword} = req.body
+
+    const resetToken = req.cookies?.passwordResetToken
+
+    if (!resetToken) {
+        throw new ApiError(
+            401,
+            "Password reset verification required"
+        );
+    }
+    if(!newPassword || !confirmPassword){
+        throw new ApiError(400, "newpassword and confirm password are required")
+    }
+
+    if(newPassword !== confirmPassword){
+        throw new ApiError(400, "newpassword and confirmpassword must match")
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+
+    if (!passwordRegex.test(newPassword)) {
+        throw new ApiError(
+            400,
+            "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one digit, and one special character"
+        );
+    }
+
+    const userId = await redisClient.get(
+        `password_reset:${resetToken}`
+    )
+
+    if(!userId){
+        throw new ApiError(401, "Reset token is invalid or expired")
+    }
+
+    const user = await User.findById(userId)
+
+    user.password = newPassword
+    await user.save()
+
+    await redisClient.del(
+        `password_reset:${resetToken}`
+    )
+
+    const options = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production"
+            ? "none"
+            : "lax"
+    };
+
+    return res
+    .status(200)
+    .clearCookie("passwordResetToken", options)
+    .json(
+        new ApiResponse(200, {}, "reset Password successfully")
+    )
+
+
+})
+
 export{
     userRegistration,
     requestLoginOtp,
@@ -448,5 +586,6 @@ export{
     userLogout,
     userProfilePhotoDelete,
     updatePassword,
-    updateProfilePhoto
+    updateProfilePhoto,
+    refreshAccessToken
 }

@@ -8,7 +8,8 @@ import {
     userLogout,
     userProfilePhotoDelete,
     updatePassword,
-    updateProfilePhoto
+    updateProfilePhoto,
+    refreshAccessToken
 } from "../controllers/user.controller.js";
 
 const router = Router()
@@ -31,5 +32,8 @@ router.route("/update-password").patch(verifyJWT, updatePassword)
 
 //update profile-photo
 router.route("/profile-photo").patch(verifyJWT, upload.single('profilePhoto'), updateProfilePhoto)
+
+//refresh access-token
+router.route("/refresh-tokens").post(refreshAccessToken)
 
 export default router
