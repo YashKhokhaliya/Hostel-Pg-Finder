@@ -436,6 +436,7 @@ const updateProfilePhoto = AsyncHandler(async (req,res)=> {
         user.profilePhotoPublicId= profilePhoto.public_id
 
         await user.save({validateBeforeSave: false})
+
     } catch(error){
         try {
             await DeleteOnCloudinary(profilePhoto.public_id);
@@ -462,6 +463,7 @@ const updateProfilePhoto = AsyncHandler(async (req,res)=> {
     .json(
         new ApiResponse(200, {profilePhoto: user.profilePhoto}, "Profile photo updated successfully")
     )
+
 })
 
 const getCurrentUser = AsyncHandler(async(req, res)=>{
