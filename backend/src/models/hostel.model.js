@@ -1,4 +1,5 @@
 import mongoose, {Schema} from "mongoose";
+import mongooseAggregatorPaginate from "mongoose-aggregate-paginate-v2";
 
 const hostelSchema = new Schema ({
         owner:{
@@ -103,4 +104,5 @@ const hostelSchema = new Schema ({
     }
 )
 
+hostelSchema.plugin(mongooseAggregatorPaginate);
 export const Hostel = mongoose.model('Hostel', hostelSchema)
