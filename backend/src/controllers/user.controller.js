@@ -680,6 +680,34 @@ const resetPassword = AsyncHandler(async (req,res)=>{
     )
 })
 
+const deleteUSer = AsyncHandler(async(req, res)=>{
+
+    const existedUser = await User.findById(req.user?._id).select("profilePhotoPublicId");
+
+    if(!existedUser) {
+        throw new ApiError(404,"User not found")
+    }
+
+    const userPublicID=existedUser.profilePhotoPublicId;
+
+    const result = await User.findByIdAndDelete(req.user._id);
+
+    if(!result){
+        throw new ApiError(500,'Failed to delete the user')
+    }
+
+    await DeleteOnCloudinary(userPublicID);
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            'User deleted successfully'
+        )
+    )
+})
+
 export{
     userRegistration,
     requestLoginOtp,
@@ -692,5 +720,6 @@ export{
     refreshAccessToken,
     forgetPasswordOtp,
     verifyOtpPasswordReset,
-    resetPassword
+    resetPassword,
+    deleteUSer
 }

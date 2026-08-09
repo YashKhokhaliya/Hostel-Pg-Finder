@@ -13,7 +13,8 @@ import {
     forgetPasswordOtp,
     verifyOtpPasswordReset,
     resetPassword,
-    getCurrentUser
+    getCurrentUser,
+    deleteUSer
 } from "../controllers/user.controller.js";
 
 const router = Router()
@@ -43,5 +44,6 @@ router.route("/forget-password").post(forgetPasswordOtp)
 router.route("/verify-otp").post(verifyOtpPasswordReset)
 router.route("/reset-password").patch(resetPassword)
 router.route("/current-user").get(verifyJWT,getCurrentUser)
+router.route("/delete-user").delete(verifyJWT,deleteUSer)
 
 export default router
