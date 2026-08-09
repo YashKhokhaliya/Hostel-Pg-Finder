@@ -16,6 +16,7 @@ import {
     getCurrentUser
 } from "../controllers/user.controller.js";
 
+
 const router = Router()
 
 router.route("/register").post(
@@ -43,5 +44,7 @@ router.route("/forget-password").post(forgetPasswordOtp)
 router.route("/verify-otp").post(verifyOtpPasswordReset)
 router.route("/reset-password").patch(resetPassword)
 router.route("/current-user").get(verifyJWT,getCurrentUser)
+
+
 
 export default router
