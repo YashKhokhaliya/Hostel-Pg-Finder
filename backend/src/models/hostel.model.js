@@ -97,7 +97,11 @@ const hostelSchema = new Schema ({
             enum:['Male', 'Female', 'Other'],
             required:true,
             minlength:1
-        }
+        },
+        isVerified:{
+            type:Boolean,
+            default:false
+        },
     },
     {
         timestamps:true

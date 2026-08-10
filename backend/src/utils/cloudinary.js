@@ -50,7 +50,54 @@ const DeleteOnCloudinary = async function (PublicId){
     }
 }
 
+const uploadVerificationDocument = async (localFilePath) => {
+    try {
+        if (!localFilePath) return null;
+
+        const response = await cloudinary.uploader.upload(
+            localFilePath,
+            {
+                resource_type: "auto",
+                type: "authenticated",
+                folder: "verification-documents"
+            }
+        );
+
+        if (fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+        }
+
+        return response;
+
+    } catch (error) {
+
+        if (localFilePath && fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+        }
+
+        console.error(
+            "Cloudinary verification document upload error:",
+            error
+        );
+
+        return null;
+    }
+};
+
+const generateVerificationDocumentUrl = (
+    publicId,
+    resourceType
+) => {
+    return cloudinary.url(publicId, {
+        resource_type: resourceType,
+        type: "authenticated",
+        secure: true,
+        sign_url: true
+    });
+};
+
 export {
     uploadOnCloudinary,
-    DeleteOnCloudinary
+    DeleteOnCloudinary,
+    uploadVerificationDocument
 };
