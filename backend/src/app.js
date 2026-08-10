@@ -3,7 +3,7 @@ import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import userRouter from './routes/user.routes.js'
 import hostelRouter from './routes/hostel.routes.js'
-
+import adminRouter from './routes/admin.routes.js'
 const app = express();
 
 app.use(cors({
@@ -19,6 +19,7 @@ app.use(cookieParser())
 
 // user routes
 app.use('/api/v1/users',userRouter);
-app.use('/api/v1/hostels',hostelRouter)
+app.use('/api/v1/hostels',hostelRouter);
+app.use('/api/v1/admins',adminRouter);
 
 export {app}

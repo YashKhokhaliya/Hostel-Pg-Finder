@@ -1,76 +1,6 @@
 import { transporter } from "../config/mail.config.js";
 import { ApiError } from "../utils/ApiError.js";
 
-const sendWelcomeEmail = async (email, username) => {
-    try {
-        await transporter.sendMail({
-            from: `"Hostel-PG-Find" <${process.env.MAIL_USER}>`,
-            to: email,
-            subject: "Welcome to Hostel-PG-Find 🎉",
-            text: `Welcome to Hostel-PG-Find, ${username}!
-    
-    Your account has been successfully created.
-    
-    You can now explore hostels and PGs, connect with owners, and find the perfect place for your stay.
-    
-    Thank you for joining us.
-    
-    Regards,
-    Hostel-PG-Find Team
-    
-    This is an automated email. Please do not reply to this message.`,
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
-                    
-                    <h2 style="text-align: center;">
-                        Welcome to Hostel-PG-Find 🎉
-                    </h2>
-    
-                    <p>Hello <strong>${username}</strong>,</p>
-    
-                    <p>
-                        We are excited to have you with us!
-                        Your account has been successfully created.
-                    </p>
-    
-                    <p>
-                        With <strong>Hostel-PG-Find</strong>, you can:
-                    </p>
-    
-                    <ul>
-                        <li>Find suitable hostels and PG accommodations</li>
-                        <li>Connect with hostel and PG owners</li>
-                        <li>Explore available stays easily</li>
-                    </ul>
-    
-                    <p>
-                        We hope you find the perfect place for your stay.
-                    </p>
-    
-                    <p>
-                        Thank you for joining our platform.
-                    </p>
-    
-                    <p>
-                        Regards,<br>
-                        <strong>Hostel-PG-Find Team</strong>
-                    </p>
-    
-                    <hr>
-    
-                    <p style="font-size: 12px; color: #777;">
-                        This is an automated email. Please do not reply to this message.
-                    </p>
-    
-                </div>
-            `
-        });
-    } catch (error) {
-        console.error('Error sending welcome email:',error);
-        throw new ApiError(500,'Error while sending welcome email')
-    }
-};
-
 const sendOTPEmail = async (email, otp) => {
     try {
         await transporter.sendMail({
@@ -259,9 +189,281 @@ const sendPasswordResetOTPEmail = async (email, otp) => {
     }
 };
 
+const sendStudentWelcomeEmail = async (email, username) => {
+    try {
+        await transporter.sendMail({
+            from: `"Hostel-PG-Find" <${process.env.MAIL_USER}>`,
+            to: email,
+            subject: "Welcome to Hostel-PG-Find 🎉",
+            text: `Welcome to Hostel-PG-Find, ${username}!
+
+Your account has been successfully created.
+
+You can now explore hostels and PGs, view accommodation details, and find a suitable place for your stay.
+
+With Hostel-PG-Find, you can:
+- Search for hostels and PGs
+- Explore available accommodations
+- View accommodation details
+- Connect with hostel and PG owners
+
+We hope Hostel-PG-Find helps you find a comfortable and suitable place to stay.
+
+Thank you for joining us.
+
+Regards,
+Hostel-PG-Find Team
+
+This is an automated email. Please do not reply to this message.`,
+
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
+
+                    <h2 style="text-align: center;">
+                        Welcome to Hostel-PG-Find 🎉
+                    </h2>
+
+                    <p>Hello <strong>${username}</strong>,</p>
+
+                    <p>
+                        Welcome to <strong>Hostel-PG-Find</strong>!
+                        Your account has been successfully created.
+                    </p>
+
+                    <p>
+                        You can now explore hostels and PGs and find
+                        a comfortable and suitable place for your stay.
+                    </p>
+
+                    <p>
+                        With <strong>Hostel-PG-Find</strong>, you can:
+                    </p>
+
+                    <ul>
+                        <li>Search for suitable hostels and PGs</li>
+                        <li>Explore available accommodations</li>
+                        <li>View accommodation details</li>
+                        <li>Connect with hostel and PG owners</li>
+                    </ul>
+
+                    <p>
+                        We hope you find the perfect place for your stay.
+                    </p>
+
+                    <p>
+                        Thank you for joining <strong>Hostel-PG-Find</strong>.
+                    </p>
+
+                    <p>
+                        Regards,<br>
+                        <strong>Hostel-PG-Find Team</strong>
+                    </p>
+
+                    <hr>
+
+                    <p style="font-size: 12px; color: #777;">
+                        This is an automated email. Please do not reply to this message.
+                    </p>
+
+                </div>
+            `
+        });
+    } catch (error) {
+        console.error("Error sending welcome email:", error);
+        throw new ApiError(500, "Error while sending welcome email");
+    }
+};
+
+const sendOwnerWelcomeEmail = async (email, username) => {
+    try {
+        await transporter.sendMail({
+            from: `"Hostel-PG-Find" <${process.env.MAIL_USER}>`,
+            to: email,
+            subject: "Welcome to Hostel-PG-Find 🎉",
+
+            text: `Welcome to Hostel-PG-Find, ${username}!
+
+Your owner account has been successfully created.
+
+You can now use Hostel-PG-Find to list and manage your hostel or PG accommodations and connect with students looking for a place to stay.
+
+With Hostel-PG-Find, you can:
+- Add and manage your hostel or PG listings
+- Provide accommodation details and facilities
+- Connect with students looking for accommodation
+- Manage your listings conveniently
+
+We hope Hostel-PG-Find helps you reach students and manage your accommodations easily.
+
+Thank you for joining our platform.
+
+Regards,
+Hostel-PG-Find Team
+
+This is an automated email. Please do not reply to this message.`,
+
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
+
+                    <h2 style="text-align: center;">
+                        Welcome to Hostel-PG-Find 🎉
+                    </h2>
+
+                    <p>Hello <strong>${username}</strong>,</p>
+
+                    <p>
+                        Welcome to <strong>Hostel-PG-Find</strong>!
+                        Your owner account has been successfully created.
+                    </p>
+
+                    <p>
+                        You can now use Hostel-PG-Find to list and manage
+                        your hostel or PG accommodations and connect with
+                        students looking for a place to stay.
+                    </p>
+
+                    <p>
+                        With <strong>Hostel-PG-Find</strong>, you can:
+                    </p>
+
+                    <ul>
+                        <li>Add and manage your hostel or PG listings</li>
+                        <li>Provide accommodation details and facilities</li>
+                        <li>Connect with students looking for accommodation</li>
+                        <li>Manage your listings conveniently</li>
+                    </ul>
+
+                    <p>
+                        We hope Hostel-PG-Find helps you reach students
+                        and manage your accommodations easily.
+                    </p>
+
+                    <p>
+                        Thank you for joining our platform.
+                    </p>
+
+                    <p>
+                        Regards,<br>
+                        <strong>Hostel-PG-Find Team</strong>
+                    </p>
+
+                    <hr>
+
+                    <p style="font-size: 12px; color: #777;">
+                        This is an automated email. Please do not reply to this message.
+                    </p>
+
+                </div>
+            `
+        });
+    } catch (error) {
+        console.error("Error sending owner welcome email:", error);
+        throw new ApiError(
+            500,
+            "Error while sending owner welcome email"
+        );
+    }
+};
+
+const sendAdminWelcomeEmail = async (email, username) => {
+    try {
+        await transporter.sendMail({
+            from: `"Hostel-PG-Find" <${process.env.MAIL_USER}>`,
+            to: email,
+            subject: "Welcome to Hostel-PG-Find - Admin Account 🎉",
+
+            text: `Welcome to Hostel-PG-Find, ${username}!
+
+Your administrator account has been successfully created.
+
+As an administrator, you can help maintain the quality and reliability of the Hostel-PG-Find platform by reviewing verification requests and managing platform activities assigned to you.
+
+As an admin, you can:
+- Review hostel and PG verification requests
+- Verify submitted documents
+- Approve or reject verification requests
+- Manage verification activities for your assigned area
+- Help maintain a reliable platform for students and owners
+
+Please ensure that all verification requests are reviewed carefully and handled according to the platform's guidelines.
+
+Thank you for being a part of the Hostel-PG-Find administration team.
+
+Regards,
+Hostel-PG-Find Team
+
+This is an automated email. Please do not reply to this message.`,
+
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
+
+                    <h2 style="text-align: center;">
+                        Welcome to Hostel-PG-Find 🎉
+                    </h2>
+
+                    <p>Hello <strong>${username}</strong>,</p>
+
+                    <p>
+                        Your <strong>administrator account</strong> has been
+                        successfully created.
+                    </p>
+
+                    <p>
+                        As an administrator, you help maintain the quality
+                        and reliability of the <strong>Hostel-PG-Find</strong>
+                        platform.
+                    </p>
+
+                    <p>
+                        As an admin, you can:
+                    </p>
+
+                    <ul>
+                        <li>Review hostel and PG verification requests</li>
+                        <li>Verify submitted documents</li>
+                        <li>Approve or reject verification requests</li>
+                        <li>Manage verification activities for your assigned area</li>
+                        <li>Help maintain a reliable platform for students and owners</li>
+                    </ul>
+
+                    <p>
+                        Please ensure that verification requests are reviewed
+                        carefully and handled according to the platform's
+                        guidelines.
+                    </p>
+
+                    <p>
+                        Thank you for being a part of the
+                        <strong>Hostel-PG-Find administration team</strong>.
+                    </p>
+
+                    <p>
+                        Regards,<br>
+                        <strong>Hostel-PG-Find Team</strong>
+                    </p>
+
+                    <hr>
+
+                    <p style="font-size: 12px; color: #777;">
+                        This is an automated email. Please do not reply to this message.
+                    </p>
+
+                </div>
+            `
+        });
+    } catch (error) {
+        console.error("Error sending admin welcome email:", error);
+        throw new ApiError(
+            500,
+            "Error while sending admin welcome email"
+        );
+    }
+};
 
 export {
     sendOTPEmail,
-    sendWelcomeEmail,
+    sendStudentWelcomeEmail,
+    sendOwnerWelcomeEmail,
+    sendAdminWelcomeEmail,
     sendPasswordResetOTPEmail
 };

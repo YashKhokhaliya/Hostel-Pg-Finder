@@ -9,7 +9,9 @@ import { redisClient } from "../config/redis.config.js";
 
 import {
     sendOTPEmail,
-    sendWelcomeEmail,
+    sendStudentWelcomeEmail,
+    sendAdminWelcomeEmail,
+    sendOwnerWelcomeEmail,
     sendPasswordResetOTPEmail
 } from "../services/mail.service.js";
 
@@ -57,10 +59,10 @@ const userRegistration = AsyncHandler(async(req, res)=>{
     }
 
     // role either be owner or student
-    if (!["student", "owner"].includes(role.toLowerCase())) {
+    if (!["student", "owner", "admin"].includes(role.toLowerCase())) {
         throw new ApiError(
             400,
-            "Role must be either student or owner"
+            "Role must be student or owner or admin"
         );
     }
 
@@ -230,7 +232,16 @@ const userLogin = AsyncHandler(async (req,res) => {
 
     if(!userAlreadyVerified){
         try{
-            await sendWelcomeEmail(user.email, user.username)
+            if(user.role==='student'){
+                await sendStudentWelcomeEmail(user.email, user.username)
+            }
+            else if(user.role==='owner'){
+                await sendOwnerWelcomeEmail(user.email, user.username)
+            }
+            else {
+                await sendAdminWelcomeEmail(user.email, user.username)
+            }
+            
         } catch(error){
             console.error(`Welcome email failed for ${user.email}:`,error.message)
         }

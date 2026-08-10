@@ -36,7 +36,7 @@ const userSchema = new Schema(
             trim: true
         },
 
-        profilePhoto: { 
+        profilePhoto: {
             type: String,
         },
 
@@ -45,7 +45,7 @@ const userSchema = new Schema(
         },
 
         gender:{
-            type:String, 
+            type:String,
             required:true,
             enum:['male', 'female', 'other']
         },
@@ -60,6 +60,13 @@ const userSchema = new Schema(
         password: {
             type: String,
             required: [true, "Password is required"]
+        },
+
+        city:{
+            type:String,
+            required: function (){
+                return this.role==='admin'
+            }
         },
 
         isVerified:{

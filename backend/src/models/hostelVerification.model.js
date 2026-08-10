@@ -8,7 +8,7 @@ const verifySchema = new Schema(
             required: true,
         },
 
-        area: {
+        city: {
             type: String,
             enum: ["Ahmedabad", "Vadodara", "Surat", "Rajkot"],
             required: true,
@@ -22,6 +22,17 @@ const verifySchema = new Schema(
         documentPublicId: {
             type: String,
             required: true,
+        },
+
+        documentResourceType:{
+            type:String,
+            required:true
+        },
+
+        documentType:{
+            type:String,
+            enum:['Property document', 'Property tax receipt', 'Lease agreement', 'Owner authorization / NOC'],
+            required:true
         },
 
         status: {
@@ -40,12 +51,17 @@ const verifySchema = new Schema(
             type: String,
             default: null,
         },
-
     },
     {
         timestamps: true,
     }
 );
+
+verifySchema.index({
+    city: 1,
+    status: 1,
+    createdAt: -1
+})
 
 export const VerifyDocument = mongoose.model(
     "VerifyDocument",
