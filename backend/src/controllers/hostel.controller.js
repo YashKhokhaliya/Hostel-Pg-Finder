@@ -1,9 +1,10 @@
 import { AsyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
-import { uploadOnCloudinary, DeleteOnCloudinary } from "../utils/Cloudinary.js";
+import { uploadOnCloudinary, DeleteOnCloudinary, uploadVerificationDocument } from "../utils/Cloudinary.js";
 import { User } from "../models/user.model.js";
 import { Hostel } from "../models/hostel.model.js";
+import { VerifyDocument } from "../models/hostelVerification.model.js";
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {hostelName, location, rent, type, facilities, allowedGenders} = req.body
@@ -149,4 +150,87 @@ const createHostel = AsyncHandler(async(req,res) =>{
 
 })
 
-export {createHostel}
+const verifyHostel = AsyncHandler(async(req,res) =>{
+    const {city, documentType} = req.body
+
+    if(!city?.trim() || !documentType?.trim()){
+        throw new ApiError(400, "City and DocumentType are required")
+    }
+
+    const existingVerification = await VerifyDocument.findOne({
+        owner: req.user._id,
+        status: "Pending"
+    });
+
+    if (existingVerification) {
+        throw new ApiError(
+            409,
+            "Your verification request is already under review"
+        );
+    }
+
+    const validCity = ["Ahmedabad", "Vadodara", "Surat", "Rajkot"]
+
+    const normalizedCity = validCity.find(
+        (item)=> item.toLowerCase() === city.trim().toLowerCase()
+    )
+
+    if (!normalizedCity) {
+        throw new ApiError(400, "Please select a valid area");
+    }
+
+    const validDocument = ['Property document', 'Property tax receipt', 'Lease agreement', 'Owner authorization / NOC']
+
+    const normalizedDocument = validDocument.find(
+        (item)=> item.toLowerCase() === documentType.trim().toLowerCase()
+    )
+
+    if(!normalizedDocument){
+        throw new ApiError(400, "Please select valid document type")
+    }
+
+    const documentLocalPath = req.file?.path
+    if(!documentLocalPath){
+        throw new ApiError(400, "Please upload verification document")
+    }
+
+    const document = await uploadVerificationDocument(documentLocalPath)
+
+    if(!document?.secure_url || !document?.public_id || !document?.resource_type){
+        throw new ApiError(500, "Error while uploading document")
+    }
+
+    let verification
+
+    try{
+        verification = await VerifyDocument.create({
+            owner: req.user._id,
+            document: document.secure_url,
+            documentPublicId: document.public_id,
+            documentResouceType: document.resource_type,
+            city: normalizedCity,
+            documentType: normalizedDocument
+        })
+
+    } catch(error){
+         try {
+            await DeleteOnCloudinary(document.public_id);
+        } catch (cleanupError) {
+            console.error(
+                "Failed to delete verification document:",
+                cleanupError
+            );
+        }
+        throw error;
+    }
+
+    return res
+    .status(201)
+    .json(
+        new ApiResponse(201, verification, "Verification request submitted successfully")
+    )
+})
+
+export {createHostel,
+        verifyHostel
+}

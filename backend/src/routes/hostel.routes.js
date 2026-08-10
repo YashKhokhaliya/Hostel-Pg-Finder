@@ -2,7 +2,9 @@ import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js"
 import { upload } from "../middlewares/multer.middleware.js"
 
-import { createHostel } from "../controllers/hostel.controller.js";
+import { createHostel,
+        verifyHostel
+} from "../controllers/hostel.controller.js";
 
 const router = Router()
 
@@ -12,5 +14,10 @@ router.route("/create-hostel").post(
     createHostel
 );
 
+router.route("/verify-hostel").post(
+    verifyJWT,
+    upload.single("document"),
+    verifyHostel
+)
 
 export default router
