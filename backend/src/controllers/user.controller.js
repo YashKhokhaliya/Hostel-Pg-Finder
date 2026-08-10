@@ -34,7 +34,7 @@ const generateAccessAndRefreshToken = async(userId)=>{
 }
 
 const userRegistration = AsyncHandler(async(req, res)=>{
-    const {username, fullname, email, password, gender, number, role} = req.body;
+    const {username, fullname, email, password, gender, number, role, city} = req.body;
     const path = req.file?.path;
 
     // validate all the field
@@ -100,6 +100,11 @@ const userRegistration = AsyncHandler(async(req, res)=>{
     if(existedUser){
         throw new ApiError(409,'username, email or mobile number already exists')
     }
+
+    if(role==='Admin' && !city){
+        throw new ApiError(400, 'Admin must register with city')
+    }
+    
     let result;
     try {
     
@@ -116,6 +121,7 @@ const userRegistration = AsyncHandler(async(req, res)=>{
             profilePhotoPublicId:result?.public_id,
             gender:gender,
             role:role,
+            city:city,
             password:password,
         })
     

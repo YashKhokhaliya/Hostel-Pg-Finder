@@ -14,11 +14,6 @@ const verifySchema = new Schema(
             required: true,
         },
 
-        document: {
-            type: String,
-            required: true,
-        },
-
         documentPublicId: {
             type: String,
             required: true,

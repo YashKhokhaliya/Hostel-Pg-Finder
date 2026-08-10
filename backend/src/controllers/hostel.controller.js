@@ -1,10 +1,11 @@
 import { AsyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
-import { uploadOnCloudinary, DeleteOnCloudinary, uploadVerificationDocument } from "../utils/Cloudinary.js";
+import { uploadOnCloudinary, DeleteOnCloudinary, uploadVerificationDocument, generateVerificationDocumentUrl } from "../utils/Cloudinary.js";
 import { User } from "../models/user.model.js";
 import { Hostel } from "../models/hostel.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
+import deleteLocalFile from "../utils/tempCleanup.js"
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {hostelName, location, rent, type, facilities, allowedGenders} = req.body
@@ -152,9 +153,18 @@ const createHostel = AsyncHandler(async(req,res) =>{
 
 const verifyHostel = AsyncHandler(async(req,res) =>{
     const {city, documentType} = req.body
+    const documentLocalPath = req.file?.path
+
+    if(!documentLocalPath){
+        throw new ApiError(400, "Please upload verification document")
+    }
 
     if(!city?.trim() || !documentType?.trim()){
         throw new ApiError(400, "City and DocumentType are required")
+    }
+
+    if(req.user.role!=='owner'){
+        throw new ApiError(403,'Only owners can make request')
     }
 
     const existingVerification = await VerifyDocument.findOne({
@@ -189,31 +199,27 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
         throw new ApiError(400, "Please select valid document type")
     }
 
-    const documentLocalPath = req.file?.path
-    if(!documentLocalPath){
-        throw new ApiError(400, "Please upload verification document")
-    }
-
-    const document = await uploadVerificationDocument(documentLocalPath)
+    const document = await uploadOnCloudinary(documentLocalPath)
 
     if(!document?.secure_url || !document?.public_id || !document?.resource_type){
         throw new ApiError(500, "Error while uploading document")
     }
 
     let verification
-
+    let result;
     try{
         verification = await VerifyDocument.create({
             owner: req.user._id,
-            document: document.secure_url,
             documentPublicId: document.public_id,
-            documentResouceType: document.resource_type,
+            documentResourceType: document.resource_type,
             city: normalizedCity,
             documentType: normalizedDocument
         })
 
+        result = await VerifyDocument.findById(verification._id).select("-__v -verifiedBy -rejectionReason -documentPublicId")
+
     } catch(error){
-         try {
+        try {
             await DeleteOnCloudinary(document.public_id);
         } catch (cleanupError) {
             console.error(
@@ -227,10 +233,11 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
     return res
     .status(201)
     .json(
-        new ApiResponse(201, verification, "Verification request submitted successfully")
+        new ApiResponse(201, result, "Verification request submitted successfully")
     )
 })
 
-export {createHostel,
-        verifyHostel
+export {
+    createHostel,
+    verifyHostel
 }

@@ -5,7 +5,7 @@ import { Hostel } from "../models/hostel.model.js";
 import { User } from "../models/user.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
 import mongoose from "mongoose";
-import {generateVerificationDocumentUrl} from "../utils/signed_url.js"
+import {generateVerificationDocumentUrl} from "../utils/cloudinary.js"
 
 const getRequest = AsyncHandler( async(req, res) => {
     const requests = await VerifyDocument
@@ -50,6 +50,7 @@ const getRequestById = AsyncHandler( async(req, res) => {
                 pipeline:[
                     {
                         $project:{
+                            _id:0,
                             fullname:1,
                             email:1,
                             mobileNumber:1
@@ -68,7 +69,6 @@ const getRequestById = AsyncHandler( async(req, res) => {
             $project:{
                 _id:1,
                 owner:1,
-                document:1,
                 documentType:1,
                 documentPublicId:1,
                 documentResourceType:1,
@@ -81,9 +81,9 @@ const getRequestById = AsyncHandler( async(req, res) => {
         throw new ApiError(404, "Verification request not found");
     }
 
-    if(result[0]){
-        const signedUrl = await generateVerificationDocumentUrl(result[0]?.documentPublicId, result[0]?.documentResourceType)
-        result[0].document=signedUrl;
+    if(request[0]){
+        const signedUrl = generateVerificationDocumentUrl(request[0]?.documentPublicId, request[0]?.documentResourceType)
+        request[0].document_url=signedUrl;
     }
 
     return res

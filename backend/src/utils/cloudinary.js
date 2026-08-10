@@ -8,26 +8,34 @@ cloudinary.config({
 })
 
 const uploadOnCloudinary = async (localFilePath) => {
-  try {
-    if (!localFilePath) return null;
+    // console.log("TEMP FILE:", localFilePath);
+//     console.log("EXISTS BEFORE:", fs.existsSync(localFilePath));
 
-    const response = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "auto",
-    });
+// fs.unlinkSync(localFilePath);
 
-    fs.unlinkSync(localFilePath);
-    return response;
+// console.log("EXISTS AFTER:", fs.existsSync(localFilePath));
+    try {
+        if (!localFilePath) return null;
 
-  } catch (error) {
+        console.log("TEMP FILE:", localFilePath);
 
-    if (fs.existsSync(localFilePath)) {
-      fs.unlinkSync(localFilePath);
+        const response = await cloudinary.uploader.upload(localFilePath, {
+            resource_type: "auto",
+        });
+
+        fs.unlinkSync(localFilePath);
+        return response;
+
+    } catch (error) {
+        console.log("EXISTS BEFORE:", fs.existsSync(localFilePath));
+        if (fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+        }
+        console.log("EXISTS AFTER:", fs.existsSync(localFilePath));
+        console.error("Cloudinary Upload Error:", error)
+
+        return null;
     }
-
-    console.error("Cloudinary Upload Error:", error)
-
-    return null;
-  }
 };
 
 const DeleteOnCloudinary = async function (PublicId){
@@ -63,18 +71,14 @@ const uploadVerificationDocument = async (localFilePath) => {
             }
         );
 
-        if (fs.existsSync(localFilePath)) {
-            fs.unlinkSync(localFilePath);
-        }
+        fs.unlinkSync(localFilePath);
 
         return response;
 
     } catch (error) {
-
-        if (localFilePath && fs.existsSync(localFilePath)) {
+        if (fs.existsSync(localFilePath)) {
             fs.unlinkSync(localFilePath);
         }
-
         console.error(
             "Cloudinary verification document upload error:",
             error
@@ -82,12 +86,14 @@ const uploadVerificationDocument = async (localFilePath) => {
 
         return null;
     }
+    finally {
+        if (localFilePath && fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+        }
+    }
 };
 
-const generateVerificationDocumentUrl = (
-    publicId,
-    resourceType
-) => {
+const generateVerificationDocumentUrl = ( publicId,resourceType) => {
     return cloudinary.url(publicId, {
         resource_type: resourceType,
         type: "authenticated",
@@ -99,5 +105,6 @@ const generateVerificationDocumentUrl = (
 export {
     uploadOnCloudinary,
     DeleteOnCloudinary,
-    uploadVerificationDocument
+    uploadVerificationDocument,
+    generateVerificationDocumentUrl
 };

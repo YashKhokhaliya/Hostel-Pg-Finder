@@ -2,6 +2,8 @@ import dotenv from 'dotenv'
 import connectDB from './db/index.js'
 import { app } from './app.js'
 import { connectRedis } from './config/redis.config.js'
+import startTempCleanup from "./utils/tempCleanup.js";
+
 dotenv.config({path: './.env'})
 
 connectDB()
@@ -9,6 +11,7 @@ connectDB()
     await connectRedis()
 })
 .then(()=>{
+    startTempCleanup();
     app.listen(process.env.PORT, ()=>{
         console.log(`server is running at port: ${process.env.PORT}`)
     })
