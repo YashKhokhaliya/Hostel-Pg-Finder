@@ -8,8 +8,21 @@ import { VerifyDocument } from "../models/hostelVerification.model.js";
 import deleteLocalFile from "../utils/tempCleanup.js"
 
 const createHostel = AsyncHandler(async(req,res) =>{
+    const {verificationId} = req.params
+
+    const verification = await VerifyDocument.findOne({
+        _id: verificationId,
+        owner: req.user._id,
+        status: "Accepted",
+        used: false
+    }).select("_id")
+
+    if(!verification){
+        throw new ApiError(403, "Owner verification is required to create a hostel or this hostel is already created")
+    }
+
     const {hostelName, location, rent, type, facilities, allowedGenders} = req.body
-    
+
     let parsedLocation;
     let parsedAllowedGenders;
     let parsedFacilities;
@@ -31,9 +44,32 @@ const createHostel = AsyncHandler(async(req,res) =>{
     if(!hostelName?.trim() || !type?.trim() || rent===null || rent===undefined){
         throw new ApiError(400, "These all fields are required")
     }
-    if(!parsedLocation?.googleMapLink || !parsedLocation?.address || !parsedLocation?.state || !parsedLocation?.city || !parsedLocation?.area){
+
+    if (parsedFacilities === null || Array.isArray(parsedFacilities)) {
+        throw new ApiError(400, "Invalid facilities");
+    }
+
+    const requiredLocationFields = [
+        "googleMapLink",
+        "address",
+        "state",
+        "city",
+        "area"
+    ]
+
+    const isLocationValid = requiredLocationFields.every(
+        (field) => 
+            typeof parsedLocation?.[field] === "string" &&
+            parsedLocation[field].trim() 
+    )
+
+    if(!isLocationValid){
         throw new ApiError(400, "All location fields are required")
     }
+
+    requiredLocationFields.forEach((field)=> {
+        parsedLocation[field] = parsedLocation[field].trim()
+    })
 
     if (!Array.isArray(parsedAllowedGenders) || parsedAllowedGenders.length===0) {
         throw new ApiError(
@@ -42,11 +78,23 @@ const createHostel = AsyncHandler(async(req,res) =>{
         );
     }
 
+    const areGendersValid = parsedAllowedGenders.every(
+        (gender) =>
+            typeof gender === "string" &&
+            gender.trim() !== ""
+    );
+
+    if (!areGendersValid) {
+        throw new ApiError(400, "Invalid gender format");
+    }
+
     const validGenders = ["Male", "Female", "Other"];
 
     const normalizedGenders = parsedAllowedGenders.map((gender) =>{
-        return gender.charAt(0).toUpperCase() +
-            gender.slice(1).toLowerCase();
+        const value = gender.trim();
+
+        return value.charAt(0).toUpperCase() +
+            value.slice(1).toLowerCase();
     });
 
     const isValidGender = normalizedGenders.every((gender)=>
@@ -73,11 +121,18 @@ const createHostel = AsyncHandler(async(req,res) =>{
         throw new ApiError(400, "Rent must be a valid non-negative number");
     }
 
-    parsedLocation.address = parsedLocation.address.trim();
-    parsedLocation.googleMapLink = parsedLocation.googleMapLink.trim();
-    parsedLocation.state = parsedLocation.state.trim();
-    parsedLocation.city = parsedLocation.city.trim();
-    parsedLocation.area = parsedLocation.area.trim();
+    const validFacilities = ["wifi","ac","laundry","parking","food","hotWater","security"]
+
+    const areFacilitiesValid = Object.entries(parsedFacilities).every(
+        ([key, value]) =>
+            validFacilities.includes(key) &&
+            typeof value === "boolean"
+    );
+
+    if (!areFacilitiesValid) {
+        throw new ApiError(400, "Invalid facilities");
+    }
+
 
     const photoLocalPaths = req.files?.map((file) => file.path);
     if(!photoLocalPaths || photoLocalPaths.length < 2 || photoLocalPaths.length > 8){
@@ -112,8 +167,10 @@ const createHostel = AsyncHandler(async(req,res) =>{
         throw new ApiError(500, "Failed to upload hostel photos")
     }
 
+    let hostel
+
     try{
-        const hostel = await Hostel.create({
+        hostel = await Hostel.create({
             owner: req.user._id,
             hostelName: hostelName.trim(),
             location: parsedLocation,
@@ -124,17 +181,30 @@ const createHostel = AsyncHandler(async(req,res) =>{
             photos: uploadedPhotos,
         })
 
-        if(!hostel){
-            throw new ApiError(500, "Hostel not created")
-        }
+        const hostelResponse = hostel.toObject();
+        delete hostelResponse.__v;
+
+        verification.used = true
+        await verification.save()
 
         return res
         .status(201)
         .json(
-            new ApiResponse(201, hostel, "Hostel created successfully")
+            new ApiResponse(201, hostelResponse, "Hostel created successfully")
         )
     }
     catch(error){
+        if (hostel?._id) {
+            try {
+                await Hostel.findByIdAndDelete(hostel._id);
+            } catch (cleanupError) {
+                console.log(
+                    "Failed to rollback hostel:",
+                    cleanupError
+                );
+            }
+        }
+
         for(const photo of uploadedPhotos){
             try{
                 await DeleteOnCloudinary(photo.publicId)
@@ -143,11 +213,25 @@ const createHostel = AsyncHandler(async(req,res) =>{
                 console.log("Failed to cleanup hostel photo:",cleanupError)
             }
         }
+
+        if (verification.used) {
+            try {
+                verification.used = false;
+                await verification.save();
+            } catch (cleanupError) {
+                console.log(
+                    "Failed to rollback verification:",
+                    cleanupError
+                );
+            }
+        }
+
         throw new ApiError(
             error.statusCode || 500,
             error.message || "Failed to create Hostel"
         );
     }
+
 
 })
 

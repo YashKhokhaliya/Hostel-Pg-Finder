@@ -46,6 +46,11 @@ const verifySchema = new Schema(
             type: String,
             default: null,
         },
+
+        used: {
+            type: Boolean,
+            default: false
+        }
     },
     {
         timestamps: true,

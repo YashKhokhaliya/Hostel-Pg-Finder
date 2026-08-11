@@ -8,7 +8,7 @@ import { createHostel,
 
 const router = Router()
 
-router.route("/create-hostel").post(
+router.route("/create-hostel/:verificationId").post(
     verifyJWT,
     upload.array("photos", 8),
     createHostel

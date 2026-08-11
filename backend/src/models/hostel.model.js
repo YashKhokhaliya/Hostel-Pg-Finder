@@ -98,10 +98,6 @@ const hostelSchema = new Schema ({
             required:true,
             minlength:1
         },
-        isVerified:{
-            type:Boolean,
-            default:false
-        },
     },
     {
         timestamps:true
