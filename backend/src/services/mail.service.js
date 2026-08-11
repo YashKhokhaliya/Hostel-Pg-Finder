@@ -460,10 +460,218 @@ This is an automated email. Please do not reply to this message.`,
     }
 };
 
+const sendVerificationRejectedEmail = async (email, username, reason) => {
+    try {
+        await transporter.sendMail({
+            from: `"Hostel-PG-Find" <${process.env.MAIL_USER}>`,
+            to: email,
+            subject: "Document Verification Request Rejected - Hostel-PG-Find",
+
+            text: `Hello ${username},
+
+Your document verification request on Hostel-PG-Find has been reviewed by our administration team.
+
+Unfortunately, your verification request has been rejected.
+
+Reason for rejection:
+${reason}
+
+You can correct the issue mentioned above and submit a new verification request with the required document.
+
+Please make sure that the document is clear, valid, and meets the verification requirements before retrying.
+
+Thank you for using Hostel-PG-Find.
+
+Regards,
+Hostel-PG-Find Team
+
+This is an automated email. Please do not reply to this message.`,
+
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
+
+                    <h2 style="text-align: center;">
+                        Document Verification Update
+                    </h2>
+
+                    <p>
+                        Hello <strong>${username}</strong>,
+                    </p>
+
+                    <p>
+                        Your document verification request on
+                        <strong>Hostel-PG-Find</strong> has been reviewed
+                        by our administration team.
+                    </p>
+
+                    <p>
+                        Unfortunately, your verification request has been
+                        <strong>rejected</strong>.
+                    </p>
+
+                    <div style="
+                        background-color: #f8f8f8;
+                        border-left: 4px solid #d9534f;
+                        padding: 15px;
+                        margin: 20px 0;
+                    ">
+                        <p style="margin: 0 0 8px 0;">
+                            <strong>Reason for rejection:</strong>
+                        </p>
+
+                        <p style="margin: 0;">
+                            ${reason}
+                        </p>
+                    </div>
+
+                    <p>
+                        You can correct the issue mentioned above and submit
+                        a new verification request with the required document.
+                    </p>
+
+                    <p>
+                        Please make sure that the document is clear, valid,
+                        and meets the verification requirements before retrying.
+                    </p>
+
+                    <p>
+                        Thank you for using
+                        <strong>Hostel-PG-Find</strong>.
+                    </p>
+
+                    <p>
+                        Regards,<br>
+                        <strong>Hostel-PG-Find Team</strong>
+                    </p>
+
+                    <hr>
+
+                    <p style="font-size: 12px; color: #777;">
+                        This is an automated email. Please do not reply to this message.
+                    </p>
+
+                </div>
+            `
+        });
+
+    } catch (error) {
+        console.error(
+            "Error sending verification rejection email:",
+            error
+        );
+
+        throw new ApiError(
+            500,
+            "Error while sending verification rejection email"
+        );
+    }
+};
+
+const sendVerificationAcceptedEmail = async (email, username) => {
+    try {
+        await transporter.sendMail({
+            from: `"Hostel-PG-Find" <${process.env.MAIL_USER}>`,
+            to: email,
+            subject: "Document Verification Approved - Hostel-PG-Find",
+
+            text: `Hello ${username},
+
+Good news!
+
+Your document verification request on Hostel-PG-Find has been reviewed and approved by our administration team.
+
+Your account has now been successfully verified.
+
+You can now continue using the owner features of Hostel-PG-Find and proceed with managing your hostel or PG listings.
+
+Thank you for completing the verification process and for using Hostel-PG-Find.
+
+Regards,
+Hostel-PG-Find Team
+
+This is an automated email. Please do not reply to this message.`,
+
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
+
+                    <h2 style="text-align: center;">
+                        Document Verification Approved 🎉
+                    </h2>
+
+                    <p>
+                        Hello <strong>${username}</strong>,
+                    </p>
+
+                    <p>
+                        Good news!
+                    </p>
+
+                    <p>
+                        Your document verification request on
+                        <strong>Hostel-PG-Find</strong> has been reviewed
+                        and <strong>approved</strong> by our administration team.
+                    </p>
+
+                    <div style="
+                        background-color: #f8f8f8;
+                        border-left: 4px solid #28a745;
+                        padding: 15px;
+                        margin: 20px 0;
+                    ">
+                        <p style="margin: 0;">
+                            <strong>Verification Status:</strong> Approved
+                        </p>
+                    </div>
+
+                    <p>
+                        Your account has now been successfully verified.
+                    </p>
+
+                    <p>
+                        You can now continue using the owner features of
+                        <strong>Hostel-PG-Find</strong> and proceed with
+                        managing your hostel or PG listings.
+                    </p>
+
+                    <p>
+                        Thank you for completing the verification process
+                        and for using <strong>Hostel-PG-Find</strong>.
+                    </p>
+
+                    <p>
+                        Regards,<br>
+                        <strong>Hostel-PG-Find Team</strong>
+                    </p>
+
+                    <hr>
+
+                    <p style="font-size: 12px; color: #777;">
+                        This is an automated email. Please do not reply to this message.
+                    </p>
+
+                </div>
+            `
+        });
+
+    } catch (error) {
+        console.error(
+            "Error sending verification accepted email:",
+            error
+        );
+
+        throw new ApiError(
+            500,
+            "Error while sending verification accepted email"
+        );
+    }
+};
+
 export {
     sendOTPEmail,
     sendStudentWelcomeEmail,
     sendOwnerWelcomeEmail,
     sendAdminWelcomeEmail,
-    sendPasswordResetOTPEmail
+    sendPasswordResetOTPEmail,
+    sendVerificationRejectedEmail,
+    sendVerificationAcceptedEmail
 };

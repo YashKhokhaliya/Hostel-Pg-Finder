@@ -1,11 +1,14 @@
 import { AsyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { Hostel } from "../models/hostel.model.js";
 import { User } from "../models/user.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
 import mongoose from "mongoose";
 import {generateVerificationDocumentUrl} from "../utils/cloudinary.js"
+import {
+    sendVerificationRejectedEmail,
+    sendVerificationAcceptedEmail
+} from "../services/mail.service.js"
 
 const getRequest = AsyncHandler( async(req, res) => {
     const requests = await VerifyDocument
@@ -39,7 +42,8 @@ const getRequestById = AsyncHandler( async(req, res) => {
         {
             $match:{
                 _id:new mongoose.Types.ObjectId(verifyId),
-                city:req.user?.city
+                city:req.user?.city,
+                status:'Pending'
             }
         },
         {
@@ -97,15 +101,98 @@ const getRequestById = AsyncHandler( async(req, res) => {
     )
 })
 
-// const rejectRequestById = AsyncHandler( async(req, res) => {
+const updateStatus = AsyncHandler( async(req, res) => {
+    const { verifyId } = req.params;
+    const {status, reason} = req.body;
 
-// })
+    if(!mongoose.Types.ObjectId.isValid(verifyId)){
+        throw new ApiError(404,'Invalid request id')
+    }
 
-// const acceptRequestById = AsyncHandler( async(req, res)=>{
+    if(status!=='Rejected' && status!=='Accepted'){
+        throw new ApiError(400,'Status must be either reject or accept')
+    }
 
-// })
+    if(status==='Rejected' && !reason?.trim()){
+        throw new ApiError(400, 'Rejection reason required')
+    }
+
+    const user = await VerifyDocument.aggregate([
+        {
+            $match:{
+                _id:new mongoose.Types.ObjectId(verifyId),
+                status:'Pending'
+            }
+        },
+        {
+            $lookup:{
+                from:'users',
+                localField:'owner',
+                foreignField:'_id',
+                pipeline:[
+                    {
+                        $project:{
+                            email:1,
+                            username:1
+                        }
+                    }
+                ],
+                as:'user'
+            }
+        },
+        {
+            $unwind:{
+                path:'$user'
+            }
+        }
+    ])
+
+    if(!user.length){
+        throw new ApiError(404,'Pending verification request not found')
+    }
+
+    const email = user[0].user.email
+    const username = user[0].user.username
+
+    const result = await VerifyDocument.findByIdAndUpdate(
+        verifyId,
+        {
+            $set:{
+                verifiedBy:req.user._id,
+                status:status,
+                rejectionReason : status==='Rejected' ? reason.trim() : null
+            }
+        },
+        {
+            returnDocument:'after',
+            runValidators: true
+        }
+    )
+
+    if(!result){
+        throw new ApiError(500,'Failed to update the result');
+    }
+
+    if(status==='Rejected'){
+        await sendVerificationRejectedEmail(email, username, reason.trim());
+    }
+    else {
+        await sendVerificationAcceptedEmail(email, username)
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            "Request resolved successfully"
+        )
+    )
+
+})
 
 export {
     getRequest,
-    getRequestById
+    getRequestById,
+    updateStatus
 }
