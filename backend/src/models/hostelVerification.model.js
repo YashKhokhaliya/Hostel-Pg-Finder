@@ -42,6 +42,11 @@ const verifySchema = new Schema(
             default: null,
         },
 
+        used:{
+            type:Boolean,
+            default:false
+        },
+
         rejectionReason: {
             type: String,
             default: null,
