@@ -10,7 +10,7 @@ const verifySchema = new Schema(
 
         city: {
             type: String,
-            enum: ["Ahmedabad", "Vadodara", "Surat", "Rajkot"],
+            enum: ["ahmedabad", "vadodara", "surat", "rajkot"],
             required: true,
         },
 
@@ -32,8 +32,8 @@ const verifySchema = new Schema(
 
         status: {
             type: String,
-            enum: ["Pending", "Accepted", "Rejected"],
-            default: "Pending",
+            enum: ["pending", "accepted", "rejected"],
+            default: "rending",
         },
 
         verifiedBy: {

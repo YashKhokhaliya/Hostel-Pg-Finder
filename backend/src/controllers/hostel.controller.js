@@ -321,7 +321,214 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
     )
 })
 
+const getAllHostel = AsyncHandler(async(req, res)=>{
+    let { minRange, maxRange, type, gender, state, city } = req.query;
+
+    if (type !== undefined && !Array.isArray(type)) {
+        type = [type];
+    }
+
+    if (gender !== undefined && !Array.isArray(gender)) {
+        gender = [gender];
+    }
+
+    if (type) {
+        if (type.length === 0) {
+            throw new ApiError(400, "Type cannot be empty");
+        }
+
+        if (!type.every(t => typeof t === "string")) {
+            throw new ApiError(400, "Invalid type format");
+        }
+
+        type.forEach((t,i)=>{
+            type[i]=t.trim().toLowerCase();
+        })
+
+        if (
+            type.some(t => t === "") ||
+            !type.every(t => ["pg", "hostel"].includes(t))
+        ) {
+            throw new ApiError(400, "Invalid type");
+        }
+    }
+
+    if (gender) {
+        if (gender.length === 0) {
+            throw new ApiError(400, "Gender cannot be empty");
+        }
+
+        if (!gender.every(g => typeof g === "string")) {
+            throw new ApiError(400, "Invalid gender format");
+        }
+
+        gender.forEach((g,i)=>{
+            gender[i]=g.trim().toLowerCase();
+        })
+
+        if (
+            gender.some(g => g === "") ||
+            !gender.every(g =>
+                ["male", "female", "other"].includes(g)
+            )
+        ) {
+            throw new ApiError(400, "Invalid gender");
+        }
+    }
+
+    if (state !== undefined) {
+        if (typeof state !== "string" || state.trim() === "") {
+            throw new ApiError(400, "Invalid state");
+        }
+
+        state = state.trim().toLowerCase();
+    }
+
+    if (city !== undefined) {
+        if (typeof city !== "string" || city.trim() === "") {
+            throw new ApiError(400, "Invalid city");
+        }
+
+        city = city.trim().toLowerCase();
+    }
+
+    let min = null;
+    let max = null;
+
+    if (minRange !== undefined) {
+        min = Number(minRange);
+
+        if (!Number.isFinite(min) || min < 0) {
+            throw new ApiError(400, "Invalid minimum range");
+        }
+    }
+
+    if (maxRange !== undefined) {
+        max = Number(maxRange);
+
+        if (!Number.isFinite(max) || max < 0) {
+            throw new ApiError(400, "Invalid maximum range");
+        }
+    }
+
+    if (min !== null && max !== null && min > max) {
+        throw new ApiError(
+            400,
+            "Minimum range cannot be greater than maximum range"
+        );
+    }
+
+    const match = {};
+
+    if (state !== undefined) {
+        match["location.state"] = state;
+    }
+
+    if (city !== undefined) {
+        match["location.city"] = city;
+    }
+
+    if (min !== null || max !== null) {
+        match.rent = {};
+
+        if (min !== null) {
+            match.rent.$gte = min;
+        }
+
+        if (max !== null) {
+            match.rent.$lte = max;
+        }
+    }
+
+    if (type !== undefined) {
+        match.type = {
+            $in: type
+        };
+    }
+
+    if (gender !== undefined) {
+        match.allowedGenders = {
+            $in: gender
+        };
+    }
+
+    let page = Number(req.query.page ?? 1);
+
+    if (!Number.isInteger(page) || page < 1) {
+        throw new ApiError(400, "Invalid page");
+    }
+
+    if (!Number.isInteger(page) || page < 1) {
+        throw new ApiError(400, "Invalid page");
+    }
+
+    const skip = (page - 1) * 20;
+
+    const result = await Hostel.aggregate([
+        {
+            $match: match
+        },
+        {
+            $skip:skip
+        },
+        {
+            $limit:20
+        },
+        {
+            $lookup:{
+                from:'users',
+                localField:'owner',
+                foreignField:'_id',
+                pipeline:[
+                    {
+                        $project:{
+                            fullname:1,
+                            email:1,
+                            mobileNumber:1
+                        }
+                    }
+                ],
+                as:'owner'
+            }
+        },
+        {
+            $unwind:{
+                path:'$owner'
+            }
+        },
+        {
+            $project:{
+                hostelName:1,
+                "location.address":1,
+                "location.googleMapLink":1,
+                "location.state":1,
+                "location.city":1,
+                "location.area":1,
+                rent:1,
+                type:1,
+                facilities:1,
+                "photos.url":1,
+                allowedGenders:1,
+                "owner.fullname":1,
+                "owner.mobileNumber":1,
+                "owner.email":1,
+            }
+        }
+    ]);
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            result,
+            'Successfully fetched the hostels'
+        )
+    );
+})
+
 export {
     createHostel,
-    verifyHostel
+    verifyHostel,
+    getAllHostel
 }
