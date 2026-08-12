@@ -253,7 +253,7 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
 
     const existingVerification = await VerifyDocument.findOne({
         owner: req.user._id,
-        status: "Pending"
+        status: "pending"
     });
 
     if (existingVerification) {
@@ -296,7 +296,7 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
             owner: req.user._id,
             documentPublicId: document.public_id,
             documentResourceType: document.resource_type,
-            city: normalizedCity,
+            city: normalizedCity.toLocaleLowerCase(),
             documentType: normalizedDocument
         })
 
