@@ -6,14 +6,17 @@ import { User } from "../models/user.model.js";
 import { Hostel } from "../models/hostel.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
 import deleteLocalFile from "../utils/tempCleanup.js"
+import mongoose from "mongoose";
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {verificationId} = req.params
-
+    if (!mongoose.isValidObjectId(verificationId)) {
+        throw new ApiError(400, "Invalid verification Id");
+    }
     const verification = await VerifyDocument.findOne({
         _id: verificationId,
         owner: req.user._id,
-        status: "Accepted",
+        status: "accepted",
         used: false
     }).select("_id")
 
@@ -88,36 +91,33 @@ const createHostel = AsyncHandler(async(req,res) =>{
         throw new ApiError(400, "Invalid gender format");
     }
 
-    const validGenders = ["Male", "Female", "Other"];
+    const validGenders = ["male", "female", "other"];
 
-    const normalizedGenders = parsedAllowedGenders.map((gender) =>{
-        const value = gender.trim();
-
-        return value.charAt(0).toUpperCase() +
-            value.slice(1).toLowerCase();
-    });
-
-    const isValidGender = normalizedGenders.every((gender)=>
-        validGenders.includes(gender)
+    const isValidGender = parsedAllowedGenders.every((gender)=>
+        validGenders.includes(gender.trim().toLowerCase())
     )
 
     if(!isValidGender){
         throw new ApiError(400, "Gender is not valid")
     }
 
+    const normalizedGenders = parsedAllowedGenders.map(
+        (gender) => gender.trim().toLowerCase()
+    );
+
     let normalizedType;
 
     if (type.trim().toLowerCase() === "hostel") {
-        normalizedType = "Hostel";
+        normalizedType = "hostel";
     }
     else if (type.trim().toLowerCase() === "pg") {
-        normalizedType = "PG";
+        normalizedType = "pg";
     }
     else {
         throw new ApiError(400, "Type is not valid");
     }
 
-    if (Number(rent) < 0 || Number.isNaN(Number(rent))) {
+    if ( String(rent).trim() === "" ||Number(rent) < 0 || Number.isNaN(Number(rent))) {
         throw new ApiError(400, "Rent must be a valid non-negative number");
     }
 
@@ -263,10 +263,10 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
         );
     }
 
-    const validCity = ["Ahmedabad", "Vadodara", "Surat", "Rajkot"]
+    const validCity = ["ahmedabad", "vadodara", "surat", "rajkot"]
 
     const normalizedCity = validCity.find(
-        (item)=> item.toLowerCase() === city.trim().toLowerCase()
+        (item)=> item === city.trim().toLowerCase()
     )
 
     if (!normalizedCity) {
@@ -321,7 +321,31 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
     )
 })
 
+const getHostelById = AsyncHandler(async(req,res)=>{
+    const {hostelId} = req.params
+
+    if(!mongoose.isValidObjectId(hostelId)){
+        throw new ApiError(400, "Invalid Hostel Id")
+    }
+
+    const hostel = await Hostel.findById(hostelId)
+    .populate("owner", "fullname profilePhoto")
+    .select("-__v  -photos.publicId")
+
+    if(!hostel){
+        throw new ApiError(404, "Hostel Not Found")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, hostel, "Hostel fetched successfully")
+    )
+
+})
+
 export {
     createHostel,
-    verifyHostel
+    verifyHostel,
+    getHostelById
 }

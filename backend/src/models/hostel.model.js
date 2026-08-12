@@ -46,9 +46,9 @@ const hostelSchema = new Schema ({
         },
         type:{
             type:String,
-            enum:['Hostel', 'PG'],
+            enum:['hostel', 'pg'],
             required:true,
-            default:'Hostel'
+            default:'hostel'
         },
         facilities:{
             wifi:{
@@ -94,7 +94,7 @@ const hostelSchema = new Schema ({
         ],
         allowedGenders:{
             type:[String],
-            enum:['Male', 'Female', 'Other'],
+            enum:['male', 'female', 'other'],
             required:true,
             minlength:1
         },

@@ -109,11 +109,11 @@ const updateStatus = AsyncHandler( async(req, res) => {
         throw new ApiError(404,'Invalid request id')
     }
 
-    if(status!=='Rejected' && status!=='Accepted'){
+    if(status!=='rejected' && status!=='accepted'){
         throw new ApiError(400,'Status must be either reject or accept')
     }
 
-    if(status==='Rejected' && !reason?.trim()){
+    if(status==='rejected' && !reason?.trim()){
         throw new ApiError(400, 'Rejection reason required')
     }
 

@@ -3,7 +3,8 @@ import { verifyJWT } from "../middlewares/auth.middleware.js"
 import { upload } from "../middlewares/multer.middleware.js"
 
 import { createHostel,
-        verifyHostel
+        verifyHostel,
+        getHostelById
 } from "../controllers/hostel.controller.js";
 
 const router = Router()
@@ -19,5 +20,9 @@ router.route("/verify-hostel").post(
     upload.single("document"),
     verifyHostel
 )
+
+//get hostelById
+
+router.route("/:hostelId").get(verifyJWT, getHostelById)
 
 export default router
