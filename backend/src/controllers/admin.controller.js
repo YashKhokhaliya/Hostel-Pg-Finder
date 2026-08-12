@@ -14,7 +14,7 @@ const getRequest = AsyncHandler( async(req, res) => {
     const requests = await VerifyDocument
     .find({
         city: req.user?.city,
-        status: "Pending"
+        status: "pending"
     })
     .select("_id owner createdAt")
     .sort({ createdAt: -1 })
@@ -121,7 +121,7 @@ const updateStatus = AsyncHandler( async(req, res) => {
         {
             $match:{
                 _id:new mongoose.Types.ObjectId(verifyId),
-                status:'Pending'
+                status:'pending'
             }
         },
         {
@@ -160,7 +160,7 @@ const updateStatus = AsyncHandler( async(req, res) => {
             $set:{
                 verifiedBy:req.user._id,
                 status:status,
-                rejectionReason : status==='Rejected' ? reason.trim() : null
+                rejectionReason : status==='rejected' ? reason.trim() : null
             }
         },
         {
@@ -173,7 +173,7 @@ const updateStatus = AsyncHandler( async(req, res) => {
         throw new ApiError(500,'Failed to update the result');
     }
 
-    if(status==='Rejected'){
+    if(status==='rejected'){
         await sendVerificationRejectedEmail(email, username, reason.trim());
     }
     else {

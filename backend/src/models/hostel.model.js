@@ -10,7 +10,8 @@ const hostelSchema = new Schema ({
         hostelName:{
             type:String,
             required:true,
-            trim:true
+            trim:true,
+            index:true
         },
         location:{
             address:{
@@ -26,23 +27,27 @@ const hostelSchema = new Schema ({
             state: {
                 type: String,
                 required: true,
-                trim: true
+                trim: true,
+                index:true,
             },
             city: {
                 type: String,
                 required: true,
-                trim: true
+                trim: true,
+                index:true
             },
             area: {
                 type: String,
                 required: true,
-                trim: true
+                trim: true,
+                index:true
             }
         },
         rent: {
             type: Number,
             required: true,
-            min: 0
+            min: 0,
+            index:true
         },
         type:{
             type:String,
@@ -103,6 +108,12 @@ const hostelSchema = new Schema ({
         timestamps:true
     }
 )
+
+hostelSchema.index({
+    "location.state": 1,
+    "location.city": 1,
+    rent: 1
+});
 
 hostelSchema.plugin(mongooseAggregatorPaginate);
 export const Hostel = mongoose.model('Hostel', hostelSchema)

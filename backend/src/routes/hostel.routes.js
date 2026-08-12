@@ -2,9 +2,11 @@ import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js"
 import { upload } from "../middlewares/multer.middleware.js"
 
-import { createHostel,
-        verifyHostel,
-        getHostelById
+import {
+    createHostel,
+    getAllHostel,
+    verifyHostel,
+    getHostelById
 } from "../controllers/hostel.controller.js";
 
 const router = Router()
@@ -24,5 +26,9 @@ router.route("/verify-hostel").post(
 //get hostelById
 
 router.route("/:hostelId").get(verifyJWT, getHostelById)
+router.route("/get-all-hostel").get(
+    verifyJWT,
+    getAllHostel
+)
 
 export default router
