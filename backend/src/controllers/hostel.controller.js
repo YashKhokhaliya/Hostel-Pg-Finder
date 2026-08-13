@@ -6,8 +6,6 @@ import { User } from "../models/user.model.js";
 import { Hostel } from "../models/hostel.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
-import { fail } from "assert";
-import { parse } from "path";
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {verificationId} = req.params

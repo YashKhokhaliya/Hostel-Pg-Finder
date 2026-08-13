@@ -35,12 +35,11 @@ router.route("/get-my-hostel").get(
 
 //get hostelById
 router.route("/:hostelId").get(verifyJWT, getHostelById)
+
 router.route("/get-all-hostel").get(
     verifyJWT,
     getAllHostel
 )
-
-
 
 //delete hostel
 router.route("/delete-hostel/:hostelId").delete(
