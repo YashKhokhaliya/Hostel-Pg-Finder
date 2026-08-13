@@ -6,7 +6,7 @@ import { User } from "../models/user.model.js";
 import { Hostel } from "../models/hostel.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
 import deleteLocalFile from "../utils/tempCleanup.js"
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {verificationId} = req.params
@@ -549,9 +549,110 @@ const getAllHostel = AsyncHandler(async(req, res)=>{
     );
 })
 
+const getMyHostels = AsyncHandler(async(req,res)=> {
+
+    const myHostels = await Hostel.aggregate([
+        {
+            $match: {
+                owner: new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            fullname: 1,
+                            email: 1,
+                            mobileNumber: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$owner"
+        },
+        {
+            $project: {
+                hostelName: 1,
+                "location.address": 1,
+                "location.googleMapLink": 1,
+                "location.state": 1,
+                "location.city": 1,
+                "location.area": 1,
+                rent: 1,
+                type: 1,
+                facilities: 1,
+                "photos.url": 1,
+                allowedGenders: 1,
+                owner: 1
+            }
+        }
+
+    ])
+
+    if(myHostels.length===0){
+        throw new ApiError(404, "No hostel found for this owner")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, myHostels, "Your hostels fetched successfully")
+    )
+
+})
+
+const deleteHostel = AsyncHandler(async(req,res)=> {
+    const {hostelId} = req.params
+    if(!mongoose.isValidObjectId(hostelId)){
+        throw new ApiError(400, "Invalid Hostel Id")
+    }
+
+    const hostel = await Hostel.findOne({
+        owner: req.user._id,
+        _id: hostelId
+    })
+    if(!hostel){
+        throw new ApiError(404, "Hostel not found")
+    }
+
+    await Hostel.findByIdAndDelete(hostel._id)
+    
+    
+    const result = await Promise.allSettled(
+        hostel.photos.map((photo) =>
+            DeleteOnCloudinary(photo.publicId)
+        )
+    );
+
+    result.forEach((result, index) => {
+        if (result.status === "rejected") {
+            console.error(
+                `Failed to delete Cloudinary photo: ${hostel.photos[index].publicId}`,
+                result.reason
+            );
+        }
+    });
+    
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, {}, "Hostel deleted successfully")
+    )
+})
+
 export {
     createHostel,
     verifyHostel,
     getHostelById,
-    getAllHostel
+    getAllHostel,
+    getMyHostels,
+    deleteHostel
 }

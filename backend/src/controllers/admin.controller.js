@@ -43,7 +43,7 @@ const getRequestById = AsyncHandler( async(req, res) => {
             $match:{
                 _id:new mongoose.Types.ObjectId(verifyId),
                 city:req.user?.city,
-                status:'Pending'
+                status:'pending'
             }
         },
         {

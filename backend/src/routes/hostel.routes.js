@@ -6,7 +6,9 @@ import {
     createHostel,
     getAllHostel,
     verifyHostel,
-    getHostelById
+    getHostelById,
+    getMyHostels,
+    deleteHostel
 } from "../controllers/hostel.controller.js";
 
 const router = Router()
@@ -23,12 +25,24 @@ router.route("/verify-hostel").post(
     verifyHostel
 )
 
-//get hostelById
+//get Owner hostels
+router.route("/get-my-hostel").get(
+    verifyJWT,
+    getMyHostels
+)
 
+//get hostelById
 router.route("/:hostelId").get(verifyJWT, getHostelById)
 router.route("/get-all-hostel").get(
     verifyJWT,
     getAllHostel
 )
 
+
+
+//delete hostel
+router.route("/delete-hostel/:hostelId").delete(
+    verifyJWT,
+    deleteHostel
+)
 export default router
