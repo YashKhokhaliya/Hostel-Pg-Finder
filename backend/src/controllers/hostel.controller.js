@@ -180,6 +180,7 @@ const createHostel = AsyncHandler(async(req,res) =>{
             rent: Number(rent),
             type: normalizedType,
             photos: uploadedPhotos,
+            verificationId: verificationId
         })
 
         const hostelResponse = hostel.toObject();
@@ -296,7 +297,7 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
         verification = await VerifyDocument.create({
             owner: req.user._id,
             documentPublicId: document.public_id,
-            documentResourceType: document.resource_type,
+            documentAccessType: document.type,
             city: normalizedCity.toLocaleLowerCase(),
             documentType: normalizedDocument
         })
@@ -747,30 +748,29 @@ const updateHostel = AsyncHandler(async(req, res)=>{
 
 })
 
-const deleteHostel = AsyncHandler(async(req,res)=> {
-    const {hostelId} = req.params
-    if(!mongoose.isValidObjectId(hostelId)){
-        throw new ApiError(400, "Invalid Hostel Id")
+const deleteHostel = AsyncHandler(async (req, res) => {
+    const { hostelId } = req.params;
+
+    if (!mongoose.isValidObjectId(hostelId)) {
+        throw new ApiError(400, "Invalid Hostel Id");
     }
 
     const hostel = await Hostel.findOne({
         owner: req.user._id,
         _id: hostelId
-    })
-    if(!hostel){
-        throw new ApiError(404, "Hostel not found")
+    });
+
+    if (!hostel) {
+        throw new ApiError(404, "Hostel not found");
     }
 
-    await Hostel.findByIdAndDelete(hostel._id)
-    
-    
-    const result = await Promise.allSettled(
+    const results = await Promise.allSettled(
         hostel.photos.map((photo) =>
             DeleteOnCloudinary(photo.publicId)
         )
     );
 
-    result.forEach((result, index) => {
+    results.forEach((result, index) => {
         if (result.status === "rejected") {
             console.error(
                 `Failed to delete Cloudinary photo: ${hostel.photos[index].publicId}`,
@@ -778,14 +778,35 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
             );
         }
     });
-    
+
+    const verification = await VerifyDocument.findById(
+        hostel.verificationId
+    );
+
+    if (verification?.documentPublicId) {
+        await DeleteOnCloudinary(
+            verification.documentPublicId
+        );
+    }
+
+    if (verification) {
+        await VerifyDocument.findByIdAndDelete(
+            verification._id
+        );
+    }
+
+    await Hostel.findByIdAndDelete(hostel._id);
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, {}, "Hostel deleted successfully")
-    )
-})
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {},
+                "Hostel deleted successfully"
+            )
+        );
+});
 
 export {
     createHostel,
