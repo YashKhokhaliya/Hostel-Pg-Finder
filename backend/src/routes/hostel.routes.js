@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js"
 import { upload } from "../middlewares/multer.middleware.js"
+import { isOwner } from "../middlewares/owner.middleware.js";
 
 import {
     createHostel,
     getAllHostel,
     verifyHostel,
-    getHostelById
+    getHostelById,
+    updateHostel
 } from "../controllers/hostel.controller.js";
 
 const router = Router()
@@ -29,6 +31,12 @@ router.route("/:hostelId").get(verifyJWT, getHostelById)
 router.route("/get-all-hostel").get(
     verifyJWT,
     getAllHostel
+)
+
+router.route('/update-hostel').patch(
+    verifyJWT,
+    isOwner,
+    updateHostel
 )
 
 export default router
