@@ -117,8 +117,12 @@ const userRegistration = AsyncHandler(async(req, res)=>{
             email:email,
             mobileNumber:number,
             fullname:fullname,
-            profilePhoto:result?.url,
-            profilePhotoPublicId:result?.public_id,
+            profilePhoto:{
+                url:result.url,
+                public_id:result.public_id,
+                resourceType:result.resource_type,
+                type:result.type
+            },
             gender:gender,
             role:role,
             city:city,
@@ -379,14 +383,16 @@ const userProfilePhotoDelete = AsyncHandler(async(req, res)=>{
         )
     }
 
-    const userProfilePhotoPublicID = user?.profilePhotoPublicId
+    const userProfilePhotoPublicID = user?.profilePhoto?.public_id
+    const userProfilePhotoResourceType = user?.profilePhoto?.resourceType
+    const userProfilePhotoType = user?.profilePhoto?.type
+    const userProfilePhotoUrl = user?.profilePhoto?.url
 
     const result = await User.findByIdAndUpdate(
         req.user._id,
         {
             $unset:{
-                profilePhoto:1,
-                profilePhotoPublicId:1
+                profilePhoto:1
             }
         },
         {
@@ -405,9 +411,11 @@ const userProfilePhotoDelete = AsyncHandler(async(req, res)=>{
         await User.findByIdAndUpdate(
             req.user._id,
             {
-                $set:{
-                    profilePhoto:userProfilePhoto,
-                    profilePhotoPublicId:userProfilePhotoPublicID
+                $set: {
+                    "profilePhoto.url": userProfilePhotoUrl,
+                    "profilePhoto.public_id": userProfilePhotoPublicID,
+                    "profilePhoto.resourceType": userProfilePhotoResourceType,
+                    "profilePhoto.type":userProfilePhotoType
                 }
             },
             {
@@ -422,8 +430,8 @@ const userProfilePhotoDelete = AsyncHandler(async(req, res)=>{
     .status(200)
     .json(
         new ApiResponse(
-                    200,
-                    "Profile photo removed successfully"
+            200,
+            "Profile photo removed successfully"
         )
     )
 })
@@ -446,9 +454,9 @@ const updateProfilePhoto = AsyncHandler(async (req,res)=> {
         throw new ApiError(500, "Error while uploading photo")
     }
 
-    const currentPublicId = user.profilePhotoPublicId
+    const currentPublicId = user.profilePhoto.Public_id
 
-   try{
+    try{
         user.profilePhoto= profilePhoto.url
         user.profilePhotoPublicId= profilePhoto.public_id
 

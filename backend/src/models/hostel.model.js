@@ -13,6 +13,10 @@ const hostelSchema = new Schema ({
             trim:true,
             index:true
         },
+        verificationId:{
+            type:Schema.Types.ObjectId,
+            ref:'VerifyDocument',
+        },
         location:{
             address:{
                 type:String,
@@ -91,9 +95,17 @@ const hostelSchema = new Schema ({
                     type: String,
                     required: true
                 },
-                publicId: {
+                public_id: {
                     type: String,
                     required: true
+                },
+                resourceType:{
+                    type:String,
+                    required:true
+                },
+                type:{
+                    type:String,
+                    required:true
                 }
             }
         ],

@@ -6,11 +6,10 @@ import { User } from "../models/user.model.js";
 import { Hostel } from "../models/hostel.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
-import { fail } from "assert";
-import { parse } from "path";
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {verificationId} = req.params
+
     if (!mongoose.isValidObjectId(verificationId)) {
         throw new ApiError(400, "Invalid verification Id");
     }
@@ -180,7 +179,7 @@ const createHostel = AsyncHandler(async(req,res) =>{
             rent: Number(rent),
             type: normalizedType,
             photos: uploadedPhotos,
-            verificationId: verificationId
+            verificationId:verificationId
         })
 
         const hostelResponse = hostel.toObject();
@@ -297,7 +296,7 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
         verification = await VerifyDocument.create({
             owner: req.user._id,
             documentPublicId: document.public_id,
-            documentAccessType: document.type,
+            documentResourceType: document.type,
             city: normalizedCity.toLocaleLowerCase(),
             documentType: normalizedDocument
         })
@@ -748,11 +747,11 @@ const updateHostel = AsyncHandler(async(req, res)=>{
 
 })
 
-const deleteHostel = AsyncHandler(async (req, res) => {
-    const { hostelId } = req.params;
+const deleteHostel = AsyncHandler(async(req,res)=> {
+    const {hostelId} = req.params
 
-    if (!mongoose.isValidObjectId(hostelId)) {
-        throw new ApiError(400, "Invalid Hostel Id");
+    if(!mongoose.isValidObjectId(hostelId)){
+        throw new ApiError(400, "Invalid Hostel Id")
     }
 
     const hostel = await Hostel.findOne({
@@ -764,13 +763,15 @@ const deleteHostel = AsyncHandler(async (req, res) => {
         throw new ApiError(404, "Hostel not found");
     }
 
-    const results = await Promise.allSettled(
+    const result = await Promise.allSettled(
         hostel.photos.map((photo) =>
-            DeleteOnCloudinary(photo.publicId)
+            DeleteOnCloudinary(photo.publicId, 'image')
         )
     );
 
-    results.forEach((result, index) => {
+    const verifyId = hostel.verificationId
+
+    result.forEach((result, index) => {
         if (result.status === "rejected") {
             console.error(
                 `Failed to delete Cloudinary photo: ${hostel.photos[index].publicId}`,
@@ -779,23 +780,22 @@ const deleteHostel = AsyncHandler(async (req, res) => {
         }
     });
 
-    const verification = await VerifyDocument.findById(
-        hostel.verificationId
+    const documentData = await VerifyDocument.findByIdAndDelete(
+        verifyId,
+        {
+            new:false
+        }
     );
 
-    if (verification?.documentPublicId) {
-        await DeleteOnCloudinary(
-            verification.documentPublicId
-        );
+    if(!documentData){
+        throw new ApiError(400,"Hostel document data not found")
     }
 
-    if (verification) {
-        await VerifyDocument.findByIdAndDelete(
-            verification._id
-        );
-    }
+    console.log(documentData.documentPublicId, documentData.documentResourceType)
 
-    await Hostel.findByIdAndDelete(hostel._id);
+    await DeleteOnCloudinary(documentData.documentPublicId, 'image', documentData.documentResourceType)
+
+    await Hostel.findByIdAndDelete(hostel._id)
 
     return res
         .status(200)
