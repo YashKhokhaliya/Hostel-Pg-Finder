@@ -38,25 +38,28 @@ const uploadOnCloudinary = async (localFilePath) => {
     }
 };
 
-const DeleteOnCloudinary = async function (PublicId){
-    try{
-        if(!PublicId) return null
-        const response = await cloudinary.uploader.destroy(PublicId);
-        
-        if(response.result==='ok') {
-            console.log("Image is removed from cloudinary");
+const DeleteOnCloudinary = async function ( publicId, resourceType, type ) {
+    try {
+        if (!publicId) return null;
+
+        const response = await cloudinary.uploader.destroy(publicId, {
+            resource_type: resourceType,
+            type: type
+        });
+
+        if (response.result === "ok") {
+            console.log("Asset removed from Cloudinary");
             return true;
         }
-        
-        console.log("Image is not removed from cloudinary")
+
+        console.log("Asset was not removed from Cloudinary");
         return false;
 
+    } catch (error) {
+        console.error("Cloudinary deletion error:", error);
+        return null;
     }
-    catch(error){
-        console.log("Image is not found in cloudinary !!!")
-        return null
-    }
-}
+};
 
 const uploadVerificationDocument = async (localFilePath) => {
     try {
@@ -85,11 +88,6 @@ const uploadVerificationDocument = async (localFilePath) => {
         );
 
         return null;
-    }
-    finally {
-        if (localFilePath && fs.existsSync(localFilePath)) {
-            fs.unlinkSync(localFilePath);
-        }
     }
 };
 

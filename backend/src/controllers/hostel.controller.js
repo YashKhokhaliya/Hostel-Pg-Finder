@@ -9,6 +9,7 @@ import mongoose, { isValidObjectId } from "mongoose";
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {verificationId} = req.params
+
     if (!mongoose.isValidObjectId(verificationId)) {
         throw new ApiError(400, "Invalid verification Id");
     }
@@ -178,6 +179,7 @@ const createHostel = AsyncHandler(async(req,res) =>{
             rent: Number(rent),
             type: normalizedType,
             photos: uploadedPhotos,
+            verificationId:verificationId
         })
 
         const hostelResponse = hostel.toObject();
@@ -294,7 +296,7 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
         verification = await VerifyDocument.create({
             owner: req.user._id,
             documentPublicId: document.public_id,
-            documentResourceType: document.resource_type,
+            documentResourceType: document.type,
             city: normalizedCity.toLocaleLowerCase(),
             documentType: normalizedDocument
         })
@@ -747,6 +749,7 @@ const updateHostel = AsyncHandler(async(req, res)=>{
 
 const deleteHostel = AsyncHandler(async(req,res)=> {
     const {hostelId} = req.params
+
     if(!mongoose.isValidObjectId(hostelId)){
         throw new ApiError(400, "Invalid Hostel Id")
     }
@@ -759,14 +762,13 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
         throw new ApiError(404, "Hostel not found")
     }
 
-    await Hostel.findByIdAndDelete(hostel._id)
-    
-    
     const result = await Promise.allSettled(
         hostel.photos.map((photo) =>
-            DeleteOnCloudinary(photo.publicId)
+            DeleteOnCloudinary(photo.publicId, 'image')
         )
     );
+
+    const verifyId = hostel.verificationId
 
     result.forEach((result, index) => {
         if (result.status === "rejected") {
@@ -776,7 +778,23 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
             );
         }
     });
-    
+
+    const documentData = await VerifyDocument.findByIdAndDelete(
+        verifyId,
+        {
+            new:false
+        }
+    );
+
+    if(!documentData){
+        throw new ApiError(400,"Hostel document data not found")
+    }
+
+    console.log(documentData.documentPublicId, documentData.documentResourceType)
+
+    await DeleteOnCloudinary(documentData.documentPublicId, 'image', documentData.documentResourceType)
+
+    await Hostel.findByIdAndDelete(hostel._id)
 
     return res
     .status(200)

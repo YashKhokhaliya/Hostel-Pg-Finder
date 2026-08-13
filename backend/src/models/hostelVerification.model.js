@@ -14,14 +14,23 @@ const verifySchema = new Schema(
             required: true,
         },
 
-        documentPublicId: {
-            type: String,
-            required: true,
-        },
-
-        documentResourceType:{
-            type:String,
-            required:true
+        document:{
+            url: {
+                type: String,
+                required: true
+            },
+            public_id: {
+                type: String,
+                required: true
+            },
+            resourceType:{
+                type:String,
+                required:true
+            },
+            type:{
+                type:String,
+                required:true
+            }
         },
 
         documentType:{

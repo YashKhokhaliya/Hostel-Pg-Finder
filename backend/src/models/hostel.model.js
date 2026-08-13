@@ -95,9 +95,17 @@ const hostelSchema = new Schema ({
                     type: String,
                     required: true
                 },
-                publicId: {
+                public_id: {
                     type: String,
                     required: true
+                },
+                resourceType:{
+                    type:String,
+                    required:true
+                },
+                type:{
+                    type:String,
+                    required:true
                 }
             }
         ],

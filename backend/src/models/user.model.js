@@ -36,12 +36,19 @@ const userSchema = new Schema(
             trim: true
         },
 
-        profilePhoto: {
-            type: String,
-        },
-
-        profilePhotoPublicId: {
-            type: String,
+        profilePhoto:{
+            url: {
+                type: String,
+            },
+            public_id: {
+                type: String,
+            },
+            resourceType:{
+                type:String,
+            },
+            type:{
+                type:String,
+            }
         },
 
         gender:{
