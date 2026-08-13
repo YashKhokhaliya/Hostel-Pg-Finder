@@ -7,6 +7,9 @@ import { Hostel } from "../models/hostel.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
 import deleteLocalFile from "../utils/tempCleanup.js"
 import mongoose, { isValidObjectId } from "mongoose";
+import mongoose from "mongoose";
+import { fail } from "assert";
+import { parse } from "path";
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {verificationId} = req.params
@@ -41,7 +44,7 @@ const createHostel = AsyncHandler(async(req,res) =>{
 
     } catch (error) {
         throw new ApiError(400, "Invalid data format");
-    } 
+    }
 
 
     if(!hostelName?.trim() || !type?.trim() || rent===null || rent===undefined){
@@ -61,7 +64,7 @@ const createHostel = AsyncHandler(async(req,res) =>{
     ]
 
     const isLocationValid = requiredLocationFields.every(
-        (field) => 
+        (field) =>
             typeof parsedLocation?.[field] === "string" &&
             parsedLocation[field].trim() 
     )
@@ -253,7 +256,7 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
 
     const existingVerification = await VerifyDocument.findOne({
         owner: req.user._id,
-        status: "Pending"
+        status: "pending"
     });
 
     if (existingVerification) {
@@ -296,7 +299,7 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
             owner: req.user._id,
             documentPublicId: document.public_id,
             documentResourceType: document.resource_type,
-            city: normalizedCity,
+            city: normalizedCity.toLocaleLowerCase(),
             documentType: normalizedDocument
         })
 
@@ -346,6 +349,7 @@ const getHostelById = AsyncHandler(async(req,res)=>{
 const getAllHostel = AsyncHandler(async(req, res)=>{
     let { minRange, maxRange, type, gender, state, city } = req.query;
 
+    // check :- parse the array from json string array to original array
     if (type !== undefined && !Array.isArray(type)) {
         type = [type];
     }
@@ -605,6 +609,147 @@ const getMyHostels = AsyncHandler(async(req,res)=> {
     .json(
         new ApiResponse(200, myHostels, "Your hostels fetched successfully")
     )
+})
+        
+const updateHostel = AsyncHandler(async(req, res)=>{
+    const {hostelname, address, type, gender, googleMapLink} = req.body;
+    let { rent, facilities } = req.body;
+
+    const updateData = {};
+
+    if(hostelname!==undefined){
+
+        if(hostelname.trim()===''){
+            throw new ApiError(400, 'Hostel name must required')
+        }
+
+        updateData.hostelName = hostelname
+    }
+
+    if(googleMapLink !== undefined){
+
+        if(googleMapLink.trim()===''){
+            throw new ApiError(400, 'google map link must required')
+        }
+
+        updateData['location.googleMapLink'] = googleMapLink
+
+    }
+
+    if(address!==undefined){
+        
+        if(address.trim()===''){
+            throw new ApiError(400, 'Address must required')
+        }
+
+        updateData['location.address']= address
+    }
+
+    if(type!==undefined){
+        if(typeof type !== 'string'){
+            throw new ApiError(400,'type format is not valid')
+        }
+
+        if(!['hostel','pg'].includes(type.toLowerCase())){
+            throw new ApiError(400, 'type is not valid')
+        }
+
+        updateData.type=type.toLowerCase()
+
+    }
+
+    if(gender!==undefined){
+        if(!Array.isArray(gender)){
+            throw new ApiError(400, 'gender format is invalid')
+        }
+
+        if(gender.length>0){
+            const normalizedGender = gender.map(g=>g.toLowerCase());
+
+            if(!normalizedGender.every(g=>['male','female'].includes(g))){
+                throw new ApiError(400, 'gender is invalid')
+            }
+
+            updateData.gender=normalizedGender
+        }
+
+    }
+
+    if(rent!==undefined){
+        rent=Number(rent);
+
+        if(!Number.isInteger(rent) || rent<=0){
+            throw new ApiError(400, 'rent must be a positive integer number')
+        }
+
+        updateData.rent=rent;
+    }
+
+    if(facilities!==undefined){
+
+        let parsedFacilities;
+
+        if(typeof facilities !== 'object'){
+            try {
+                parsedFacilities = JSON.parse(facilities)
+            } catch (error) {
+                throw new ApiError(400,'invalid facilities JSON')
+            }
+        }
+        else{
+            parsedFacilities=facilities
+        }
+
+        if(parsedFacilities===null || Array.isArray(parsedFacilities) || typeof parsedFacilities !== 'object'){
+            throw new ApiError(400, 'invalid format of the facilities')
+        }
+
+        const allowedFacilities = ["wifi","ac","laundry","parking","food","hotWater","security"]
+
+        if(!Object.entries(parsedFacilities).every(
+            ([key,value])=>{
+                return allowedFacilities.includes(key)
+                && typeof value === 'boolean'
+            }
+        )){
+            throw new ApiError(400, 'facilities are invalid')
+        }
+
+        updateData.facilities=parsedFacilities
+
+    }
+
+    if (Object.keys(updateData).length === 0) {
+        throw new ApiError(400, 'No data provided for update');
+    }
+
+    const result = await Hostel.findOneAndUpdate(
+        {
+            owner:req.user._id
+        },
+        {
+            $set:updateData
+        },
+        {
+            returnDocument:'after'
+        }
+    )
+
+    if(!result){
+        throw new ApiError(404, 'Hostel not found')
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            result,
+            'Successfully update the data'
+        )
+    )
+
+    
 
 })
 
@@ -654,5 +799,6 @@ export {
     getHostelById,
     getAllHostel,
     getMyHostels,
-    deleteHostel
+    deleteHostel,
+    updateHostel
 }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js"
 import { upload } from "../middlewares/multer.middleware.js"
+import { isOwner } from "../middlewares/owner.middleware.js";
 
 import {
     createHostel,
@@ -8,7 +9,8 @@ import {
     verifyHostel,
     getHostelById,
     getMyHostels,
-    deleteHostel
+    deleteHostel,
+    updateHostel
 } from "../controllers/hostel.controller.js";
 
 const router = Router()
@@ -45,4 +47,10 @@ router.route("/delete-hostel/:hostelId").delete(
     verifyJWT,
     deleteHostel
 )
+router.route('/update-hostel').patch(
+    verifyJWT,
+    isOwner,
+    updateHostel
+)
+
 export default router
