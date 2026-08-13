@@ -5,9 +5,7 @@ import { uploadOnCloudinary, DeleteOnCloudinary, uploadVerificationDocument, gen
 import { User } from "../models/user.model.js";
 import { Hostel } from "../models/hostel.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
-import deleteLocalFile from "../utils/tempCleanup.js"
 import mongoose, { isValidObjectId } from "mongoose";
-import mongoose from "mongoose";
 import { fail } from "assert";
 import { parse } from "path";
 
@@ -599,10 +597,6 @@ const getMyHostels = AsyncHandler(async(req,res)=> {
         }
 
     ])
-
-    if(myHostels.length===0){
-        throw new ApiError(404, "No hostel found for this owner")
-    }
 
     return res
     .status(200)
