@@ -19,7 +19,7 @@ const verifySchema = new Schema(
             required: true,
         },
 
-        documentResourceType:{
+        documentAccessType:{
             type:String,
             required:true
         },
