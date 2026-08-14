@@ -763,9 +763,10 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
     const hostel = await Hostel.findOne({
         owner: req.user._id,
         _id: hostelId
-    })
-    if(!hostel){
-        throw new ApiError(404, "Hostel not found")
+    });
+
+    if (!hostel) {
+        throw new ApiError(404, "Hostel not found");
     }
 
     const result = await Promise.allSettled(
@@ -801,11 +802,15 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
     await Hostel.findByIdAndDelete(hostel._id)
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, {}, "Hostel deleted successfully")
-    )
-})
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {},
+                "Hostel deleted successfully"
+            )
+        );
+});
 
 export {
     createHostel,

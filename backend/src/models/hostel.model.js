@@ -115,6 +115,11 @@ const hostelSchema = new Schema ({
             required:true,
             minlength:1
         },
+        verificationId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "VerifyDocument",
+            required: true
+        }
     },
     {
         timestamps:true
