@@ -826,6 +826,69 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
         );
 });
 
+const addHostelPhotos = AsyncHandler(async(req,res)=> {
+    const {hostelId} = req.params
+
+    const hostel = await Hostel.findOne({
+        _id: hostelId,
+        owner: req.user._id
+    })
+
+    if(!hostel){
+        throw new ApiError(404, "Hostel not found")
+    }
+
+    const photosLocalPath = req.files?.map((file)=> file.path)
+
+    if(!photosLocalPath?.length){
+        throw new ApiError(400, "At least one photo is required")
+    }
+
+    if(hostel.photos.length + photosLocalPath.length > 8){
+        throw new ApiError(400, `You can add only ${8 - hostel.photos.length} more photos`)
+    }
+
+    const uploadPhotos = []
+
+    try{
+        for(const path of photosLocalPath){
+            const photo = await uploadOnCloudinary(path)
+
+            if(!photo?.url || !photo?.public_id || !photo?.resource_type || !photo?.type){
+                throw new Error("Photo upload failed")
+            }
+
+            uploadPhotos.push({
+                url: photo.url,
+                public_id: photo.public_id,
+                resourceType: photo.resource_type,
+                type: photo.type
+            })
+
+        }
+        hostel.photos.push(...uploadPhotos)
+        await hostel.save()
+
+    } catch(error){
+        for(const photo of uploadPhotos){
+            try{
+                await DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
+            }
+            catch(cleanupError){
+                console.log("Failed to cleanup hostel photo:",cleanupError)
+            }
+        }
+        throw new ApiError(500, "failed to upload photos")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, hostel.photos.url, "Photo added successfully")
+    )
+
+})
+
 export {
     createHostel,
     verifyHostel,
@@ -833,5 +896,6 @@ export {
     getAllHostel,
     getMyHostels,
     deleteHostel,
-    updateHostel
+    updateHostel,
+    addHostelPhotos
 }
