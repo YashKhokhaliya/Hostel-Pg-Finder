@@ -6,6 +6,7 @@ import { User } from "../models/user.model.js";
 import { Hostel } from "../models/hostel.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
+import { response } from "express";
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {verificationId} = req.params
@@ -810,7 +811,7 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
                 "Hostel deleted successfully"
             )
         );
-});
+})
 
 const addHostelPhotos = AsyncHandler(async(req,res)=> {
     const {hostelId} = req.params
@@ -875,6 +876,68 @@ const addHostelPhotos = AsyncHandler(async(req,res)=> {
 
 })
 
+const deleteHostelPhotos = AsyncHandler(async(req,res)=> {
+    const {hostelId} = req.params
+    if (!mongoose.isValidObjectId(hostelId)) {
+        throw new ApiError(400, "Invalid Hostel Id");
+    }
+
+    const {photoIds} = req.body
+    if(!Array.isArray(photoIds) || !photoIds.length){
+        throw new ApiError(400, "Atleast one photoId required")
+    }
+
+    const hostel = await Hostel.findOne({
+        _id: hostelId,
+        owner: req.user._id
+    })
+
+    if(!hostel){
+        throw new ApiError(404, "Hostel not found")
+    }
+
+    const uniquePhotoIds = [...new Set(photoIds)];
+
+    const deletePhotos = hostel.photos.filter((photo)=> 
+        uniquePhotoIds.includes(photo._id.toString())
+    )
+
+    const invalidPhotoIds = uniquePhotoIds.length - deletePhotos.length
+
+    if(invalidPhotoIds > 0){
+        throw new ApiError(400, `${invalidPhotoIds} photos are invalid`)
+    }
+
+    if (hostel.photos.length - deletePhotos.length < 2) {
+        throw new ApiError(
+            400,
+            "Hostel must have at least 2 photos"
+        );
+    }
+
+    hostel.photos = hostel.photos.filter((photo)=>
+        !uniquePhotoIds.includes(photo._id.toString())
+    )
+
+    await hostel.save()
+
+    for(const photo of deletePhotos){
+        try{
+            await DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
+        }
+
+        catch(cleanupError){
+            console.log(`Failed to delete photo: ${photo.public_id}`,cleanupError)
+        }
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, hostel.photos, "Hostel photos deleted successfully")
+    )
+})
+
 export {
     createHostel,
     verifyHostel,
@@ -883,5 +946,6 @@ export {
     getMyHostels,
     deleteHostel,
     updateHostel,
-    addHostelPhotos
+    addHostelPhotos,
+    deleteHostelPhotos
 }
