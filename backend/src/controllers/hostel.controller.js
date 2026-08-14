@@ -945,7 +945,11 @@ const deleteHostelPhotos = AsyncHandler(async(req,res)=> {
 
     for(const photo of deletePhotos){
         try{
-            await DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
+            await deleteQueue.add('delete',{
+                public_id:photo.public_id,
+                resource_type:photo.resourceType,
+                type:photo.type
+            })
         }
 
         catch(cleanupError){
