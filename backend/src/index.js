@@ -4,6 +4,9 @@ import { app } from "./app.js";
 import { connectRedis } from "./config/redis.config.js";
 import startTempCleanup from "./utils/tempCleanup.js";
 
+import "../src/workers/deleteCloudinary.worker.js"
+import "../src/workers/email.worker.js"
+
 dotenv.config({ path: "./.env" });
 
 const startServer = async () => {

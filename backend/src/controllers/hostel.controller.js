@@ -1,11 +1,12 @@
 import { AsyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
-import { uploadOnCloudinary, DeleteOnCloudinary, uploadVerificationDocument, generateVerificationDocumentUrl } from "../utils/Cloudinary.js";
+import { uploadOnCloudinary, uploadVerificationDocument, generateVerificationDocumentUrl } from "../utils/Cloudinary.js";
 import { User } from "../models/user.model.js";
 import { Hostel } from "../models/hostel.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
+import deleteQueue from "../queues/deleteCloudinary.queue.js";
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {verificationId} = req.params
@@ -159,7 +160,11 @@ const createHostel = AsyncHandler(async(req,res) =>{
     }   catch(error){
         for(const photo of uploadedPhotos){
             try{
-                await DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
+                await deleteQueue.add('delete',{
+                    public_id:photo.public_id,
+                    resource_type:photo.resourceType,
+                    type:photo.type
+                })
             }
             catch(cleanupError){
                 console.log("Failed to cleanup hostel photo:",cleanupError)
@@ -210,7 +215,11 @@ const createHostel = AsyncHandler(async(req,res) =>{
 
         for(const photo of uploadedPhotos){
             try{
-                await DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
+                await deleteQueue.add('delete',{
+                    public_id:photo.public_id,
+                    resource_type:photo.resourceType,
+                    type:photo.type
+                })
             }
             catch(cleanupError){
                 console.log("Failed to cleanup hostel photo:",cleanupError)
@@ -768,22 +777,23 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
         throw new ApiError(404, "Hostel not found")
     }
 
-    const result = await Promise.allSettled(
+    await Promise.all(
         hostel.photos.map((photo) =>
-            DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
+            // DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
+            deleteQueue.add('delete',
+                {
+                    public_id:photo?.public_id,
+                    resource_type:photo?.resourceType,
+                    type:photo.type
+                },
+                {
+                    attempts:2
+                }
+            )
         )
     );
 
     const verifyId = hostel.verificationId
-
-    result.forEach((result, index) => {
-        if (result.status === "rejected") {
-            console.error(
-                `Failed to delete Cloudinary photo: ${hostel.photos[index].publicId}`,
-                result.reason
-            );
-        }
-    });
 
     const documentData = await VerifyDocument.findByIdAndDelete(
         verifyId,
@@ -795,9 +805,13 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
     if(!documentData){
         throw new ApiError(400,"Hostel document data not found")
     }
-
-    await DeleteOnCloudinary(documentData.document.public_id, documentData.document.resourceType, documentData.document.type)
-
+    
+    await deleteQueue.add('delete',{
+        public_id:documentData.document.public_id,
+        resource_type:documentData.document.resourceType,
+        type:documentData.document.type
+    })
+    
     await Hostel.findByIdAndDelete(hostel._id)
 
     return res
