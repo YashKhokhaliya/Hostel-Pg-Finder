@@ -10,7 +10,8 @@ import {
     getHostelById,
     getMyHostels,
     deleteHostel,
-    updateHostel
+    updateHostel,
+    addHostelPhotos
 } from "../controllers/hostel.controller.js";
 
 const router = Router()
@@ -50,6 +51,13 @@ router.route('/update-hostel').patch(
     verifyJWT,
     isOwner,
     updateHostel
+)
+
+router.route('/add-hostel-photos/:hostelId').patch(
+    verifyJWT,
+    isOwner,
+    upload.array("photos", 8),
+    addHostelPhotos
 )
 
 export default router
