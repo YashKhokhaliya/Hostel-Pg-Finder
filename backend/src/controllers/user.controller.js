@@ -7,16 +7,11 @@ import generateOTP from "../utils/otpGenerate.js";
 import { storeOTP, verifyOTP } from "../services/otp.service.js";
 import { redisClient } from "../config/redis.config.js";
 
-import {
-    sendOTPEmail,
-    sendStudentWelcomeEmail,
-    sendAdminWelcomeEmail,
-    sendOwnerWelcomeEmail,
-    sendPasswordResetOTPEmail
-} from "../services/mail.service.js";
+import emailQueue from "../queues/email.queue.js";
 
 import jwt from "jsonwebtoken"
 import { generatePasswordResetToken } from "../services/passwordReset.service.js";
+import { optsDecodeMap } from "bullmq";
 
 
 const generateAccessAndRefreshToken = async(userId)=>{
@@ -202,7 +197,11 @@ const requestLoginOtp = AsyncHandler(async(req,res)=>{
 
     //send to user email
     try {
-        await sendOTPEmail(user.email, otp);
+        await emailQueue.add('send-otp',{
+            email:email,
+            otp:otp
+        })
+
     } catch (error) {
 
         console.error("Failed to send login OTP:", error);
@@ -259,13 +258,22 @@ const userLogin = AsyncHandler(async (req,res) => {
     if(!userAlreadyVerified){
         try{
             if(user.role==='student'){
-                await sendStudentWelcomeEmail(user.email, user.username)
+                await emailQueue.add('welcome-student',{
+                    email:email,
+                    username:user.username
+                })
             }
             else if(user.role==='owner'){
-                await sendOwnerWelcomeEmail(user.email, user.username)
+                await emailQueue.add('welcome-owner',{
+                    email:email,
+                    username:user.username
+                })
             }
             else {
-                await sendAdminWelcomeEmail(user.email, user.username)
+                await emailQueue.add('welcome-admin',{
+                    email:email,
+                    username:user.username
+                })
             }
             
         } catch(error){
@@ -611,7 +619,10 @@ const forgetPasswordOtp = AsyncHandler(async(req, res)=>{
 
     await storeOTP(email, otp);
 
-    await sendPasswordResetOTPEmail(email, otp);
+    await emailQueue.add('send-password-reset-otp',{
+        email:email,
+        otp:otp
+    })
 
     return res
     .status(200)
