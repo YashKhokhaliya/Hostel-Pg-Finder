@@ -73,9 +73,7 @@ const getRequestById = AsyncHandler( async(req, res) => {
             $project:{
                 _id:1,
                 owner:1,
-                documentType:1,
-                documentPublicId:1,
-                documentResourceType:1,
+                "document.url":1,
                 createdAt:1
             }
         }
@@ -83,11 +81,6 @@ const getRequestById = AsyncHandler( async(req, res) => {
 
     if (!request.length) {
         throw new ApiError(404, "Verification request not found");
-    }
-
-    if(request[0]){
-        const signedUrl = generateVerificationDocumentUrl(request[0]?.documentPublicId, request[0]?.documentResourceType)
-        request[0].document_url=signedUrl;
     }
 
     return res
