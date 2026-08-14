@@ -18,6 +18,7 @@ import {
 import jwt from "jsonwebtoken"
 import { generatePasswordResetToken } from "../services/passwordReset.service.js";
 
+
 const generateAccessAndRefreshToken = async(userId)=>{
     try{
         const user = await User.findById(userId)
@@ -43,7 +44,6 @@ const userRegistration = AsyncHandler(async(req, res)=>{
     // validate password
     // validate contact numberS
     // validate email
-
     if(
         [username, fullname, email, password, gender, number, role].some((field)=> !field || field.trim()==='')
     ){
@@ -68,12 +68,28 @@ const userRegistration = AsyncHandler(async(req, res)=>{
 
     // password must be in the format
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+    const usernameRegex = /^[A-Za-z0-9]{4,}$/;
+    const fullnameRegex = /^(?=.{3,50}$)[A-Za-z]+(?: [A-Za-z]+){0,2}$/
 
     if (!passwordRegex.test(password)) {
         throw new ApiError(
             400,
             "Password must contain at least 8 characters, one uppercase letter, one lowercase letter, one digit, and one special character"
         );
+    }
+
+    if(!usernameRegex.test(username)){
+        throw new ApiError(
+            400,
+            "Username must be at least 4 characters long and contain both letters and numbers. No spaces or special characters are allowed."
+        )
+    }
+
+    if(!fullnameRegex.test(fullname)){
+        throw new ApiError(
+            400,
+            "Full name must contain only alphabets, have at most 2 spaces, and be between 3 and 50 characters long."
+        )
     }
 
     // validate contact number
@@ -114,22 +130,22 @@ const userRegistration = AsyncHandler(async(req, res)=>{
     
         const user = await User.create({
             username:username,
-            email:email,
+            email:email.toLowerCase(),
             mobileNumber:number,
-            fullname:fullname,
+            fullname:fullname.toLowerCase(),
             profilePhoto:{
-                url:result.url,
-                public_id:result.public_id,
-                resourceType:result.resource_type,
-                type:result.type
+                url:result?.url,
+                public_id:result?.public_id,
+                resourceType:result?.resource_type,
+                type:result?.type
             },
             gender:gender,
             role:role,
-            city:city,
+            city:city.toLowerCase(),
             password:password,
         })
     
-        const response = await User.findById(user._id).select("-password")
+        const response = await User.findById(user._id).select("-password -__v")
     
         if(!response){
             throw new ApiError(500, 'Failed to fetch the newly registered user')
@@ -147,7 +163,7 @@ const userRegistration = AsyncHandler(async(req, res)=>{
     
     } catch (error) {
         if(result?.public_id){
-            await DeleteOnCloudinary(result?.public_id)
+            await DeleteOnCloudinary(result?.public_id, result?.resource_type, result?.type)
         }
         throw new ApiError(
             error.statusCode || 500,
@@ -181,14 +197,14 @@ const requestLoginOtp = AsyncHandler(async(req,res)=>{
 
     const otp = generateOTP();
 
-    
-    //store into radis
+    //store into redis
     await storeOTP(user.email, otp);
 
     //send to user email
     try {
         await sendOTPEmail(user.email, otp);
     } catch (error) {
+
         console.error("Failed to send login OTP:", error);
         await redisClient.del(`otp:${user.email}`);
 
@@ -405,7 +421,7 @@ const userProfilePhotoDelete = AsyncHandler(async(req, res)=>{
     }
 
     try {
-        await DeleteOnCloudinary(userProfilePhotoPublicID)
+        await DeleteOnCloudinary(userProfilePhotoPublicID, userProfilePhotoResourceType, userProfilePhotoType)
     } catch (error) {
 
         await User.findByIdAndUpdate(
@@ -444,6 +460,7 @@ const updateProfilePhoto = AsyncHandler(async (req,res)=> {
     }
 
     const user = await User.findById(req.user._id)
+
     if(!user){
         throw new ApiError(404, "User not found")
     }
@@ -454,41 +471,48 @@ const updateProfilePhoto = AsyncHandler(async (req,res)=> {
         throw new ApiError(500, "Error while uploading photo")
     }
 
-    const currentPublicId = user.profilePhoto.Public_id
+    // old photo's detail
+    const userProfilePhotoPublicID = user.profilePhoto?.public_id
+    const userProfilePhotoResourceType = user.profilePhoto?.resourceType
+    const userProfilePhotoType = user.profilePhoto?.type
+    const userProfilePhotoUrl = user.profilePhoto?.url
 
     try{
-        user.profilePhoto= profilePhoto.url
-        user.profilePhotoPublicId= profilePhoto.public_id
+        // new photo's detail
+        user.profilePhoto.url = profilePhoto.url
+        user.profilePhoto.public_id = profilePhoto.public_id
+        user.profilePhoto.resourceType = profilePhoto.resource_type
+        user.profilePhoto.type = profilePhoto.type
 
         await user.save({validateBeforeSave: false})
 
     } catch(error){
-        try {
-            await DeleteOnCloudinary(profilePhoto.public_id);
-        } catch (cleanupError) {
-            console.log(
-                "Failed to cleanup newly uploaded profile photo:",
-                cleanupError
-            );
-        }
+        // restore old photos
+        user.profilePhoto.url = userProfilePhotoUrl
+        user.profilePhoto.public_id = userProfilePhotoPublicID
+        user.profilePhoto.resourceType = userProfilePhotoResourceType
+        user.profilePhoto.type = userProfilePhotoType
 
-        throw error;
+        await user.save({validateBeforeSave: false})
+
+        // remove new photo detail
+        await DeleteOnCloudinary(profilePhoto.public_id, profilePhoto.resource_type, profilePhoto.type)
+
+        throw new ApiError(500, 'Failed to remove old photos')
     }
 
-    if (currentPublicId) {
-        try {
-            await DeleteOnCloudinary(currentPublicId);
-        } catch (error) {
-            console.log("Failed to delete old profile photo:", error);
-        }
-    }
+    // remove the old photo's detail
+    await DeleteOnCloudinary(userProfilePhotoPublicID, userProfilePhotoResourceType, userProfilePhotoType)
 
     return res
     .status(200)
     .json(
-        new ApiResponse(200, {profilePhoto: user.profilePhoto}, "Profile photo updated successfully")
+        new ApiResponse(
+            200,
+            profilePhoto.url,
+            "Successfully changed the profile photo"
+        )
     )
-
 })
 
 const getCurrentUser = AsyncHandler(async(req, res)=>{
@@ -496,7 +520,7 @@ const getCurrentUser = AsyncHandler(async(req, res)=>{
         throw new ApiError(401, 'Unauthorized request');
     }
 
-    const user = await User.findById(req.user?._id).select('-password -refreshToken -__v -profilePhotoPublicId');
+    const user = await User.findById(req.user?._id).select('-password -refreshToken -__v');
 
     if(!user) {
         throw new ApiError(404, 'User not found')
@@ -709,13 +733,15 @@ const resetPassword = AsyncHandler(async (req,res)=>{
 
 const deleteUSer = AsyncHandler(async(req, res)=>{
 
-    const existedUser = await User.findById(req.user?._id).select("profilePhotoPublicId");
+    const existedUser = await User.findById(req.user?._id).select("profilePhoto");
 
     if(!existedUser) {
         throw new ApiError(404,"User not found")
     }
 
-    const userPublicID=existedUser.profilePhotoPublicId;
+    const photoPublicId = existedUser.profilePhoto.public_id;
+    const photoResourceType = existedUser.profilePhoto.resourceType;
+    const photoType = existedUser.profilePhoto.type
 
     const result = await User.findByIdAndDelete(req.user._id);
 
@@ -723,7 +749,7 @@ const deleteUSer = AsyncHandler(async(req, res)=>{
         throw new ApiError(500,'Failed to delete the user')
     }
 
-    await DeleteOnCloudinary(userPublicID);
+    await DeleteOnCloudinary(photoPublicId, photoResourceType, photoType);
 
     return res
     .status(200)

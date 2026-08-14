@@ -117,7 +117,7 @@ const createHostel = AsyncHandler(async(req,res) =>{
         throw new ApiError(400, "Type is not valid");
     }
 
-    if ( String(rent).trim() === "" ||Number(rent) < 0 || Number.isNaN(Number(rent))) {
+    if ( String(rent).trim() === "" || Number(rent) < 0 || Number.isNaN(Number(rent))) {
         throw new ApiError(400, "Rent must be a valid non-negative number");
     }
 
@@ -151,13 +151,15 @@ const createHostel = AsyncHandler(async(req,res) =>{
 
             uploadedPhotos.push({
                 url: photo.url,
-                publicId: photo.public_id
+                public_id: photo.public_id,
+                resourceType:photo.resource_type,
+                type:photo.type
             })
         }
     }   catch(error){
         for(const photo of uploadedPhotos){
             try{
-                await DeleteOnCloudinary(photo.publicId)
+                await DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
             }
             catch(cleanupError){
                 console.log("Failed to cleanup hostel photo:",cleanupError)
@@ -208,7 +210,7 @@ const createHostel = AsyncHandler(async(req,res) =>{
 
         for(const photo of uploadedPhotos){
             try{
-                await DeleteOnCloudinary(photo.publicId)
+                await DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
             }
             catch(cleanupError){
                 console.log("Failed to cleanup hostel photo:",cleanupError)
@@ -284,7 +286,7 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
         throw new ApiError(400, "Please select valid document type")
     }
 
-    const document = await uploadOnCloudinary(documentLocalPath)
+    const document = await uploadVerificationDocument(documentLocalPath)
 
     if(!document?.secure_url || !document?.public_id || !document?.resource_type){
         throw new ApiError(500, "Error while uploading document")
@@ -295,17 +297,21 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
     try{
         verification = await VerifyDocument.create({
             owner: req.user._id,
-            documentPublicId: document.public_id,
-            documentResourceType: document.type,
+            document:{
+                url:document.secure_url,
+                public_id:document.public_id,
+                resourceType:document.resource_type,
+                type:document.type
+            },
             city: normalizedCity.toLocaleLowerCase(),
             documentType: normalizedDocument
         })
 
-        result = await VerifyDocument.findById(verification._id).select("-__v -verifiedBy -rejectionReason -documentPublicId")
+        result = await VerifyDocument.findById(verification._id).select("-__v -verifiedBy -rejectionReason")
 
     } catch(error){
         try {
-            await DeleteOnCloudinary(document.public_id);
+            await DeleteOnCloudinary(document.public_id, document.resource_type, document.type);
         } catch (cleanupError) {
             console.error(
                 "Failed to delete verification document:",
@@ -331,7 +337,7 @@ const getHostelById = AsyncHandler(async(req,res)=>{
 
     const hostel = await Hostel.findById(hostelId)
     .populate("owner", "fullname profilePhoto")
-    .select("-__v  -photos.publicId")
+    .select("-__v  -photos.public_id")
 
     if(!hostel){
         throw new ApiError(404, "Hostel Not Found")
@@ -604,7 +610,7 @@ const getMyHostels = AsyncHandler(async(req,res)=> {
         new ApiResponse(200, myHostels, "Your hostels fetched successfully")
     )
 })
-        
+
 const updateHostel = AsyncHandler(async(req, res)=>{
     const {hostelname, address, type, gender, googleMapLink} = req.body;
     let { rent, facilities } = req.body;
@@ -764,7 +770,7 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
 
     const result = await Promise.allSettled(
         hostel.photos.map((photo) =>
-            DeleteOnCloudinary(photo.publicId, 'image')
+            DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
         )
     );
 
@@ -790,9 +796,7 @@ const deleteHostel = AsyncHandler(async(req,res)=> {
         throw new ApiError(400,"Hostel document data not found")
     }
 
-    console.log(documentData.documentPublicId, documentData.documentResourceType)
-
-    await DeleteOnCloudinary(documentData.documentPublicId, 'image', documentData.documentResourceType)
+    await DeleteOnCloudinary(documentData.document.public_id, documentData.document.resourceType, documentData.document.type)
 
     await Hostel.findByIdAndDelete(hostel._id)
 
