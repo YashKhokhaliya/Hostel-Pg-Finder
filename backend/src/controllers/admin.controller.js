@@ -5,10 +5,7 @@ import { User } from "../models/user.model.js";
 import { VerifyDocument } from "../models/hostelVerification.model.js";
 import mongoose from "mongoose";
 import {generateVerificationDocumentUrl} from "../utils/cloudinary.js"
-import {
-    sendVerificationRejectedEmail,
-    sendVerificationAcceptedEmail
-} from "../services/mail.service.js"
+import emailQueue from "../queues/email.queue.js";
 
 const getRequest = AsyncHandler( async(req, res) => {
     const requests = await VerifyDocument
@@ -167,10 +164,17 @@ const updateStatus = AsyncHandler( async(req, res) => {
     }
 
     if(status==='rejected'){
-        await sendVerificationRejectedEmail(email, username, reason.trim());
+        await emailQueue.add('verification-rejected',{
+            email:email,
+            username:username,
+            reason:reason.trim()
+        })
     }
     else {
-        await sendVerificationAcceptedEmail(email, username)
+        await emailQueue.add('verification-accepted',{
+            email:email,
+            username:username
+        })
     }
 
     return res
