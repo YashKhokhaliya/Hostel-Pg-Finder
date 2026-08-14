@@ -1,18 +1,16 @@
 import { AsyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
-import { uploadOnCloudinary, DeleteOnCloudinary } from "../utils/Cloudinary.js";
+import { uploadOnCloudinary } from "../utils/Cloudinary.js";
 import { User } from "../models/user.model.js";
 import generateOTP from "../utils/otpGenerate.js";
 import { storeOTP, verifyOTP } from "../services/otp.service.js";
 import { redisClient } from "../config/redis.config.js";
 
 import emailQueue from "../queues/email.queue.js";
-
+import deleteQueue from "../queues/deleteCloudinary.queue.js";
 import jwt from "jsonwebtoken"
 import { generatePasswordResetToken } from "../services/passwordReset.service.js";
-import { optsDecodeMap } from "bullmq";
-
 
 const generateAccessAndRefreshToken = async(userId)=>{
     try{
@@ -158,7 +156,11 @@ const userRegistration = AsyncHandler(async(req, res)=>{
     
     } catch (error) {
         if(result?.public_id){
-            await DeleteOnCloudinary(result?.public_id, result?.resource_type, result?.type)
+            await deleteQueue.add('delete',{
+                public_id:result?.public_id,
+                resource_type:result?.resource_type,
+                type:result?.type
+            })
         }
         throw new ApiError(
             error.statusCode || 500,
@@ -429,7 +431,11 @@ const userProfilePhotoDelete = AsyncHandler(async(req, res)=>{
     }
 
     try {
-        await DeleteOnCloudinary(userProfilePhotoPublicID, userProfilePhotoResourceType, userProfilePhotoType)
+        await deleteQueue.add('delete',{
+            public_id:userProfilePhotoPublicID,
+            resource_type:userProfilePhotoResourceType,
+            type:userProfilePhotoType
+        })
     } catch (error) {
 
         await User.findByIdAndUpdate(
@@ -503,14 +509,21 @@ const updateProfilePhoto = AsyncHandler(async (req,res)=> {
 
         await user.save({validateBeforeSave: false})
 
-        // remove new photo detail
-        await DeleteOnCloudinary(profilePhoto.public_id, profilePhoto.resource_type, profilePhoto.type)
+        await deleteQueue.add('delete',{
+            public_id:profilePhoto.public_id,
+            resource_type:profilePhoto.resource_type,
+            type:profilePhoto.type
+        })
 
         throw new ApiError(500, 'Failed to remove old photos')
     }
 
     // remove the old photo's detail
-    await DeleteOnCloudinary(userProfilePhotoPublicID, userProfilePhotoResourceType, userProfilePhotoType)
+    await deleteQueue.add('delete',{
+        public_id :userProfilePhotoPublicID,
+        resource_type :userProfilePhotoResourceType,
+        type :userProfilePhotoType
+    })
 
     return res
     .status(200)
@@ -760,7 +773,11 @@ const deleteUSer = AsyncHandler(async(req, res)=>{
         throw new ApiError(500,'Failed to delete the user')
     }
 
-    await DeleteOnCloudinary(photoPublicId, photoResourceType, photoType);
+    await deleteQueue.add('delete',{
+        public_id:photoPublicId,
+        resource_type:photoResourceType,
+        type:photoType
+    });
 
     return res
     .status(200)

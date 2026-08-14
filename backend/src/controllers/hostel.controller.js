@@ -320,7 +320,11 @@ const verifyHostel = AsyncHandler(async(req,res) =>{
 
     } catch(error){
         try {
-            await DeleteOnCloudinary(document.public_id, document.resource_type, document.type);
+            await deleteQueue.add('delete',{
+                public_id:document.public_id,
+                resource_type:document.resource_type,
+                type:document.type
+            });
         } catch (cleanupError) {
             console.error(
                 "Failed to delete verification document:",
@@ -872,7 +876,11 @@ const addHostelPhotos = AsyncHandler(async(req,res)=> {
     } catch(error){
         for(const photo of uploadPhotos){
             try{
-                await DeleteOnCloudinary(photo.public_id, photo.resourceType, photo.type)
+                await deleteQueue.add('delete',{
+                    public_id:photo.public_id,
+                    resource_type:photo.resourceType,
+                    type:photo.type
+                })
             }
             catch(cleanupError){
                 console.log("Failed to cleanup hostel photo:",cleanupError)
