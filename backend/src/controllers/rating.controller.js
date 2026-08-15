@@ -3,6 +3,8 @@ import { User } from "../models/user.model.js";
 import { AsyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { Hostel } from "../models/hostel.model.js";
+import mongoose from "mongoose";
 
 const removeRating = AsyncHandler(async(req, res) => {
 
@@ -81,11 +83,67 @@ const addRating = AsyncHandler(async(req,res)=> {
     )
 })
 
+const updateRating = AsyncHandler(async(req,res)=> {
+    const {rating, comment} = req.body
+    const {ratingId} = req.params
+    if(!mongoose.isValidObjectId(ratingId)){
+        throw new ApiError(400, "Rating id is not valid")
+    }
+
+    const updateData = {}
+    if(rating!==undefined){
+        const ratingValue = Number(rating)
+        if(!Number.isInteger(ratingValue) || !rating || ratingValue < 1 || ratingValue > 5){
+            throw new ApiError(400, "Rating must be between 1 to 5")
+        }
+
+        updateData.rating = ratingValue
+    }
+
+    if(comment!==undefined){
+        if (typeof comment !== "string") {
+            throw new ApiError(400, "Comment must be a string")
+        }
+        if (comment.trim().length > 500) {
+            throw new ApiError(400, "Comment cannot exceed 500 characters");
+        }
+
+        updateData.comment = comment
+    }
+
+    if(Object.keys(updateData).length===0){
+        throw new ApiError(400, "At least one field is required to update")
+    }
+
+    const updateRating = await Rating.findOneAndUpdate(
+        {
+            _id: ratingId,
+            user: req.user._id,
+        },
+        updateData,
+        {
+            new: true,
+            runValidators: true
+        }
+    )
+
+    if(!updateRating){
+        throw new ApiError(404, "Rating not found or you are not allowed to update it")
+    }
+
+    const ratingResponse = updateRating.toObject();
+    delete ratingResponse.__v;
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, ratingResponse, "Rating updated successfully")
+    )
+
+})
+
 export {
     removeRating,
-    addRating
+    addRating,
+    updateRating
 }
-
-
-
-
