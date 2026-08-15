@@ -25,5 +25,6 @@ app.use('/api/v1/users',userRouter);
 app.use('/api/v1/hostels',hostelRouter);
 app.use('/api/v1/admins',adminRouter);
 app.use('/api/v1/ratings',ratingRouter)
+app.use('/api/v1/ratings',ratingRouter);
 
 export {app}
