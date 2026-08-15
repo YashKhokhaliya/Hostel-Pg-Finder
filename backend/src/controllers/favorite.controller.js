@@ -3,6 +3,7 @@ import { favoriteHostel } from "../models/favoriteHostel.model.js";
 import { AsyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import mongoose from "mongoose";
 
 const addHostel = AsyncHandler(async(req, res)=>{
     const {hostelId} = req.params
@@ -73,7 +74,45 @@ const removeHostel = AsyncHandler(async(req, res)=>{
     }
 })
 
+const getMyFavoriteHostels = AsyncHandler(async(req, res)=>{
+    try {
+        const result = await favoriteHostel.aggregate([
+            {
+                $match:{
+                    user:new mongoose.Types.ObjectId(req.user._id)
+                }
+            },
+            {
+                $lookup:{
+                    from:'hostels',
+                    localField:'hostels',
+                    foreignField:'_id',
+                    as:'hostels'
+                }
+            },
+            {
+                $project:{
+                    _id:0,
+                    hostels:1
+                }
+            }
+        ])
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                result[0]?.hostels || [],
+                "successfully fetched all the favorite hostels"
+            )
+        )
+    } catch (error) {
+        throw new ApiError(500, 'Failed to fetch favorite hostels')
+    }
+})
 export {
     addHostel,
-    removeHostel
+    removeHostel,
+    getMyFavoriteHostels
 }
