@@ -18,6 +18,11 @@ const ratingSchema = new Schema(
             min: 1,
             max: 5
         },
+        comment: {
+            type: String,
+            trim: true,
+            maxlength: 500
+        }
     },
     {timestamps: true}
 )
