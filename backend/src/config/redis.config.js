@@ -23,5 +23,3 @@ const connectRedis = async() => {
     }
 }
 export { redisClient, connectRedis, bullmqConnection };
-
-
