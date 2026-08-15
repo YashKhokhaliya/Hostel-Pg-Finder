@@ -8,6 +8,8 @@ import { VerifyDocument } from "../models/hostelVerification.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import { response } from "express";
 import deleteQueue from "../queues/deleteCloudinary.queue.js";
+import { favoriteHostel } from "../models/favoriteHostel.model.js";
+import { Rating } from "../models/rating.model.js";
 
 const createHostel = AsyncHandler(async(req,res) =>{
     const {verificationId} = req.params
@@ -357,10 +359,32 @@ const getHostelById = AsyncHandler(async(req,res)=>{
         throw new ApiError(404, "Hostel Not Found")
     }
 
+    let isFavorite = null;
+    let myrating = null;
+
+    if(req.user.role==='student'){
+        isFavorite = await FavoriteHostel.exists({
+            user: req.user._id,
+            hostels: hostelId
+        })
+
+        myrating = await Rating.findOne({
+            user:req.user._id,
+            hostel:hostelId
+        }).select('-_id -user -hostel -__v').lean()
+    }
+
+
+    const result = {
+        ...hostel,
+        isFavorite : isFavorite!==null,
+        myrating
+    }
+
     return res
     .status(200)
     .json(
-        new ApiResponse(200, hostel, "Hostel fetched successfully")
+        new ApiResponse(200, result, "Hostel fetched successfully")
     )
 })
 

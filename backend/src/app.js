@@ -6,6 +6,7 @@ import userRouter from './routes/user.routes.js'
 import hostelRouter from './routes/hostel.routes.js'
 import adminRouter from './routes/admin.routes.js'
 import ratingRouter from './routes/rating.routes.js'
+import favoriteRouter from './routes/favorite.routes.js'
 
 const app = express();
 
@@ -24,7 +25,7 @@ app.use(cookieParser())
 app.use('/api/v1/users',userRouter);
 app.use('/api/v1/hostels',hostelRouter);
 app.use('/api/v1/admins',adminRouter);
-app.use('/api/v1/ratings',ratingRouter)
 app.use('/api/v1/ratings',ratingRouter);
+app.use('/api/v1/favorites',favoriteRouter);
 
 export {app}
