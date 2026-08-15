@@ -1,4 +1,5 @@
 import mongoose, {Schema} from "mongoose"
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const ratingSchema = new Schema(
     {
@@ -31,5 +32,6 @@ ratingSchema.index(
     {user: 1, hostel: 1},
     {unique: true}
 )
+ratingSchema.plugin(mongooseAggregatePaginate);
 
 export const Rating = mongoose.model('Rating', ratingSchema)

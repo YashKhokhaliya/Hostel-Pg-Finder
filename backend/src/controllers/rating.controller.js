@@ -142,8 +142,121 @@ const updateRating = AsyncHandler(async(req,res)=> {
 
 })
 
+const getHostelRatings = AsyncHandler(async(req,res)=> {
+    const {hostelId} = req.params
+    if(!mongoose.isValidObjectId(hostelId)){
+        throw new ApiError(400, "HostelId is not valid")
+    }
+
+    const {page = 1, limit = 10} = req.query
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+
+    const hostel = await Hostel.findById(hostelId)
+    if(!hostel){
+        throw new ApiError(404, "Hostel Not Found")
+    }
+
+    const ratings = Rating.aggregate([
+        {
+            $match: {
+                hostel: new mongoose.Types.ObjectId(hostelId)
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "user",
+                foreignField: "_id",
+                as: "user",
+                pipeline: [
+                    {
+                        $project: {
+                            fullname: 1,
+                            username: 1,
+                            profilePhoto: "$profilePhoto.url"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$user"
+        },
+        {
+            $sort: {
+                createdAt: -1
+            }
+        },
+        {
+            $project: {
+                _id:1,
+                rating: 1,
+                comment: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                user: 1
+            }
+        }
+        
+    ])
+
+    const hostelRatings = await Rating.aggregatePaginate(
+        ratings,
+        {
+            page: pageNumber,
+            limit: limitNumber
+        }
+    )
+
+    const ratingStats = await Rating.aggregate([
+        {
+            $match: {
+                hostel: new mongoose.Types.ObjectId(hostelId)
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                ratingCount: { $sum: 1 },
+                averageRating: { $avg: "$rating" }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                ratingCount: 1,
+                averageRating: {
+                    $round: ["$averageRating", 1]
+                }
+            }
+        }
+    ]);
+
+    const stats = ratingStats[0] || {
+        ratingCount: 0,
+        averageRating: 0
+    };
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                hostelRatings,
+                ratingCount: stats.ratingCount,
+                averageRating: stats.averageRating
+            },
+            "Hostel Ratings fetched successfully"
+        )
+    )
+
+})
+
 export {
     removeRating,
     addRating,
-    updateRating
+    updateRating,
+    getHostelRatings
 }

@@ -4,7 +4,8 @@ import { isStudent } from '../middlewares/student.middleware.js'
 import {
     removeRating,
     addRating,
-    updateRating
+    updateRating,
+    getHostelRatings
 } from "../controllers/rating.controller.js"
 
 const router = new Router()
@@ -25,6 +26,11 @@ router.route('/update-rating/:ratingId').patch(
     verifyJWT,
     isStudent,
     updateRating
+)
+
+router.route('/get-hostel-ratings/:hostelId').get(
+    verifyJWT,
+    getHostelRatings
 )
 
 export default router
