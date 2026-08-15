@@ -36,6 +36,44 @@ const addHostel = AsyncHandler(async(req, res)=>{
 
 })
 
+const removeHostel = AsyncHandler(async(req, res)=>{
+    const {hostelId} = req.params;
+
+    try {
+        const result = await favoriteHostel.findOneAndUpdate(
+            {
+                user:req.user._id,
+                hostels:hostelId
+            },
+            {
+                $pull:{
+                    hostels:hostelId
+                }
+            }
+        )
+
+        if(!result) {
+            throw new ApiError(404,'Hostel not found in the favorite list')
+        }
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                "hostel removed from favorite list successfully"
+            )
+        )
+    }
+    catch (error) {
+        if(error instanceof ApiError){ // if the error occurs because of hostel not found then just throw that error
+            throw error
+        }
+        throw new ApiError(500, 'Failed to remove hostel from favorite list')
+    }
+})
+
 export {
-    addHostel
+    addHostel,
+    removeHostel
 }
