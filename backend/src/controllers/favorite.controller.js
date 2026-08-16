@@ -87,12 +87,24 @@ const getMyFavoriteHostels = AsyncHandler(async(req, res)=>{
                     from:'hostels',
                     localField:'hostels',
                     foreignField:'_id',
+                    pipeline:[
+                        {
+                            $project:{
+                                _id:1,
+                                rent:1,
+                                type:1,
+                                allowedGenders:1,
+                                hostelName:1
+                            }
+                        }
+                    ],
                     as:'hostels'
                 }
             },
             {
                 $project:{
                     _id:0,
+                    user:0,
                     hostels:1
                 }
             }
