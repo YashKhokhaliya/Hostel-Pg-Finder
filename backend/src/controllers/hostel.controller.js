@@ -352,7 +352,7 @@ const getHostelById = AsyncHandler(async(req,res)=>{
     }
 
     const hostel = await Hostel.findById(hostelId)
-    .populate("owner", "fullname profilePhoto")
+    .populate("owner", "fullname profilePhoto email mobileNumber")
     .select("-__v  -photos.public_id")
 
     if(!hostel){
@@ -363,7 +363,7 @@ const getHostelById = AsyncHandler(async(req,res)=>{
     let myrating = null;
 
     if(req.user.role==='student'){
-        isFavorite = await FavoriteHostel.exists({
+        isFavorite = await favoriteHostel.exists({
             user: req.user._id,
             hostels: hostelId
         })
@@ -376,7 +376,7 @@ const getHostelById = AsyncHandler(async(req,res)=>{
 
 
     const result = {
-        ...hostel,
+        ...hostel.toObject(),
         isFavorite : isFavorite!==null,
         myrating
     }

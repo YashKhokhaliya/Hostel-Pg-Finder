@@ -100,13 +100,6 @@ const getMyFavoriteHostels = AsyncHandler(async(req, res)=>{
                     ],
                     as:'hostels'
                 }
-            },
-            {
-                $project:{
-                    _id:0,
-                    user:0,
-                    hostels:1
-                }
             }
         ])
 
@@ -120,6 +113,7 @@ const getMyFavoriteHostels = AsyncHandler(async(req, res)=>{
             )
         )
     } catch (error) {
+        console.log('REAL-ERROR:-', error);
         throw new ApiError(500, 'Failed to fetch favorite hostels')
     }
 })
