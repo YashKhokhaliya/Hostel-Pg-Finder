@@ -212,6 +212,9 @@ API endpoints can be tested using Postman.
 ## 👨‍💻 Author
 
 **Yash Khokhaliya**
-
 GitHub: [YashKhokhaliya](https://github.com/YashKhokhaliya)
+
+**Yash Kanzariya**
+GitHub: [YashKhokhaliya](https://github.com/yashKanzariya876)
+
 
